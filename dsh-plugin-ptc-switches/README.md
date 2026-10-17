@@ -4,7 +4,7 @@ DSH Web 增强插件：在会话头部（铃铛旁）新增「PTC 开关」按�
 列出全部可选子代理：
 
 - **可勾选项**（`subagentRouting.switches`）：人工开关，勾选/取消即时写回路由层。
-  例如 `gpt-official`（GPT 官网）、`opus-review`（Opus 独立复核梯）。
+  例如 `gpt-official`（provider 显示名 gpt（official））、`opus-review`（Opus 独立复核梯）。
 - **Director 角色策略**：从 `dsh-plugin-subagent-director` settings 实时读取角色名、
   provider/model/reasoning effort，在同一面板配置角色是否参与 PTC、适用层级
   （设计/执行与验证/连续修改/文档）、首选或后备位置以及优先级。PTC 文件只保存
