@@ -1,0 +1,24 @@
+[submodule "dsh-archived-sessions"]
+	path = dsh-archived-sessions
+	url = https://github.com/Robert-Wang-08/dsh-archived-sessions.git
+	branch = main
+[submodule "dsh-config-pack"]
+	path = dsh-config-pack
+	url = https://github.com/Robert-Wang-08/dsh-config-pack.git
+	branch = main
+[submodule "dsh-permission-compat"]
+	path = dsh-permission-compat
+	url = https://github.com/Robert-Wang-08/dsh-permission-compat.git
+	branch = main
+[submodule "dsh-plugin-provider-badge"]
+	path = dsh-plugin-provider-badge
+	url = https://github.com/Robert-Wang-08/dsh-plugin-provider-badge
+	branch = master
+[submodule "dsh-plugin-sidebar-visibility"]
+	path = dsh-plugin-sidebar-visibility
+	url = https://github.com/Robert-Wang-08/dsh-plugin-sidebar-visibility.git
+	branch = main
+[submodule "dsh-provider-failover"]
+	path = dsh-provider-failover
+	url = https://github.com/Robert-Wang-08/dsh-provider-failover
+	branch = master
