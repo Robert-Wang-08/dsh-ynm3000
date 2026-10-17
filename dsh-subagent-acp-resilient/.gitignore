@@ -1,0 +1,9 @@
+# Scratch and run artifacts — never part of the plugin's contract.
+node_modules/
+test/.tmp/
+*.out.txt
+*-out.json
+scan*.json
+acp-recovery/
+# Machine-local PTC orchestration state — never part of the plugin's contract.
+.ptc/

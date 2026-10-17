@@ -1,0 +1,39 @@
+{
+  "name": "dsh-plugin-ptc-switches",
+  "description": "DSH Web 的 PTC 路由控制面：可视化管理子代理开关，并将 Subagent Director 角色按层级和优先级加入 PTC 候选链。",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "cordis.patch.yml",
+    "README.md"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": []
+    }
+  },
+  "keywords": [
+    "dsh",
+    "deepseek",
+    "deepseek-harness",
+    "dsh-plugin",
+    "ptc",
+    "subagent",
+    "routing",
+    "web-ui"
+  ],
+  "license": "MIT"
+}

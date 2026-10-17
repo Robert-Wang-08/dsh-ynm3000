@@ -1,0 +1,10 @@
+# dsh-plugin-subagent-monitor bundle patch.
+# Applied when the plugin is installed via
+#   dsh plugin --profile <profile> add <path-to-this-package>
+# or listed in the profile's bundle layer.
+#
+# 本条目只登记 Host 载体行；全部 UI 能力由 package.json 的 dsh.client 声明
+# 驱动浏览器半（client.js 经 conversation.session.header.actions 席位渲染面板）。
+- insert:
+    - id: subagent-monitor
+      name: dsh-plugin-subagent-monitor

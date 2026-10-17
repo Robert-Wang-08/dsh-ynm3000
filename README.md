@@ -17,6 +17,10 @@ git clone --recurse-submodules https://github.com/Robert-Wang-08/dsh-ynm3000.git
 - `dsh-plugin-sidebar-visibility`
 - `dsh-provider-failover`
 
-本机还有三份目录尚未单独建仓，因此没有放进本仓库：`dsh-plugin-ptc-switches`、`dsh-plugin-subagent-monitor`、`dsh-subagent-acp-resilient`。
+下面三份还没有独立远程仓库，源码直接放在本仓库里：
+
+- `dsh-plugin-ptc-switches`
+- `dsh-plugin-subagent-monitor`
+- `dsh-subagent-acp-resilient`
 
 根目录的 `dsh-menu.ps1` 是本机运维入口。公开发布的一键安装仍走 `dsh-config-pack` 的 GitHub tag，不从本仓库安装。

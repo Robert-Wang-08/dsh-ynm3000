@@ -1,0 +1,38 @@
+{
+  "name": "dsh-plugin-subagent-monitor",
+  "description": "DSH Web 增强插件：会话头部新增「子代理 / 后台任务」面板，类型徽标按实际路由（派发参数 / modelSelection）显示，工具名仅作驱动兜底与 tooltip，并显示运行状态、keepalive（最近活动 / 当前轮耗时）与可展开的实时输出尾部。不写 settings、不介入模型请求。",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "cordis.patch.yml",
+    "README.md"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": []
+    }
+  },
+  "keywords": [
+    "dsh",
+    "deepseek",
+    "deepseek-harness",
+    "dsh-plugin",
+    "subagent",
+    "jobs",
+    "web-ui"
+  ],
+  "license": "MIT"
+}

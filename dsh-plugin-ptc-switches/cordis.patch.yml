@@ -1,0 +1,10 @@
+# dsh-plugin-ptc-switches bundle patch.
+# Applied when the plugin is installed via
+#   dsh plugin --profile <profile> add <path-to-this-package>
+# or listed in the profile's bundle layer.
+#
+# host 半注册 /ptc-switches HTTP 端点（读写 subagentRouting.switches）；
+# client 半经 conversation.session.header.utilities 席位渲染勾选面板。
+- insert:
+    - id: ptc-switches
+      name: dsh-plugin-ptc-switches
