@@ -1,0 +1,486 @@
+{
+  "schema": "dsh-cross-device-observed/v1",
+  "origin": "self",
+  "owner": "wang",
+  "created": "2026-10-20",
+  "version": "0.1.0",
+  "observation": "new-device-packed-after-setup",
+  "capturedAt": "2026-10-20T01:38:32.6860676+08:00",
+  "authority": "Observed installation only; not a complete source-device desired state or release lock.",
+  "profile": "packed",
+  "dshVersion": "0.2.0-rc.2",
+  "umbrellaCodeSnapshotCommit": "f5ede200eea74a324053b73199c8de564121bea5",
+  "configPackTag": "v0.7.0",
+  "configPackTagCommit": "df2b9b69d337c90d2ab31291f4cee23d98ad707b",
+  "bundleOrder": [
+    "@deepseek-ai/dsh-base",
+    "@deepseek-ai/dsh-web-app",
+    "@deepseek-ai/dsh-subagent-claude-code",
+    "@deepseek-ai/dsh-subagent-codex",
+    "dsh-chat-import",
+    "dsh-mermaid-smooth",
+    "dsh-notify-bell",
+    "@jiangdaoli/dsh-archived-sessions",
+    "@local/dsh-plugin-sidebar-visibility",
+    "@local/dsh-ptc-multi-agent-mode",
+    "dsh-deepseek-keypool",
+    "dsh-plugin-provider-badge",
+    "dsh-plugin-ptc-switches",
+    "dsh-plugin-subagent-monitor",
+    "dsh-config-pack"
+  ],
+  "packages": [
+    {
+      "name": "@deepseek-ai/dsh-subagent-acp",
+      "version": "0.2.0-rc.2",
+      "sourceKind": "package-spec",
+      "portableSource": "0.2.0-rc.2",
+      "gitCommit": null,
+      "commitScope": "none",
+      "declaresBundle": false,
+      "registeredBundle": false,
+      "releaseLockedTag": null,
+      "releaseLockedCommit": null,
+      "releaseLockComparison": "not-in-components-lock",
+      "sampledArtifacts": [
+        {
+          "file": "lib/index.js",
+          "sha256": "B792C42F22DA284AA31E181670CD59978BCBF8835FD19CCF225F0E21EDCA6DFD"
+        },
+        {
+          "file": "package.json",
+          "sha256": "17A2B22790154980741841ED67DACC96843A60C4F41F098AF114AD493799A931"
+        }
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-subagent-claude-code",
+      "version": "0.2.0-rc.2",
+      "sourceKind": "package-spec",
+      "portableSource": "0.2.0-rc.2",
+      "gitCommit": null,
+      "commitScope": "none",
+      "declaresBundle": true,
+      "registeredBundle": true,
+      "releaseLockedTag": null,
+      "releaseLockedCommit": null,
+      "releaseLockComparison": "not-in-components-lock",
+      "sampledArtifacts": [
+        {
+          "file": "cordis.patch.yml",
+          "sha256": "D529193B601793E26B8635069E82CF35643D53849937ACCF1C14E7A7E75EF483"
+        },
+        {
+          "file": "lib/index.js",
+          "sha256": "3A7677F7C653D296D5B5AB42F7A3033654240A19D6971EC8E620B6594ACA8007"
+        },
+        {
+          "file": "package.json",
+          "sha256": "1E9C4A1DCBFC6EF69AD11462A8CEF3BAD2D4EFFFC261F7A18DDDA2961805A32E"
+        }
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-subagent-codex",
+      "version": "0.2.0-rc.2",
+      "sourceKind": "package-spec",
+      "portableSource": "0.2.0-rc.2",
+      "gitCommit": null,
+      "commitScope": "none",
+      "declaresBundle": true,
+      "registeredBundle": true,
+      "releaseLockedTag": null,
+      "releaseLockedCommit": null,
+      "releaseLockComparison": "not-in-components-lock",
+      "sampledArtifacts": [
+        {
+          "file": "cordis.patch.yml",
+          "sha256": "5042F0F696DF66684A9FC112CF2B5005E438B1BAE68FEEF72667C20C58B04401"
+        },
+        {
+          "file": "lib/index.js",
+          "sha256": "0CE0B225E529F141F60039F90850207FD19BAE286FF3404B17819FABCED804F7"
+        },
+        {
+          "file": "package.json",
+          "sha256": "B544EF98B53E83A16269C969FA2ECA362E96C6B0486E7DFCECF1BFB0EFE1ECF4"
+        }
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-web-app",
+      "version": "0.2.0-rc.2",
+      "sourceKind": "package-spec",
+      "portableSource": "0.2.0-rc.2",
+      "gitCommit": null,
+      "commitScope": "none",
+      "declaresBundle": true,
+      "registeredBundle": true,
+      "releaseLockedTag": null,
+      "releaseLockedCommit": null,
+      "releaseLockComparison": "not-in-components-lock",
+      "sampledArtifacts": [
+        {
+          "file": "cordis.patch.yml",
+          "sha256": "DF7653EE4C324DCA706034631926C86F13A2CF17C280CC018F8C070A0AAAD19E"
+        },
+        {
+          "file": "lib/index.js",
+          "sha256": "50C7CE5B93E8A7AC0117E066699CD31B553A5A135D38B7051D6A8364AC691AF4"
+        },
+        {
+          "file": "package.json",
+          "sha256": "8D1324675FF120ED1CE834DDD689546DEED093D41CC50FAF4A5B4D6515A1B233"
+        }
+      ]
+    },
+    {
+      "name": "@jiangdaoli/dsh-archived-sessions",
+      "version": "0.4.1",
+      "sourceKind": "link",
+      "portableSource": "<DSH_REPO>/dsh-archived-sessions",
+      "gitCommit": "ca08ed9c109b7fd41f1b98e2314efe9ad80a998e",
+      "commitScope": "component",
+      "declaresBundle": true,
+      "registeredBundle": true,
+      "releaseLockedTag": "v0.4.1",
+      "releaseLockedCommit": "ca08ed9c109b7fd41f1b98e2314efe9ad80a998e",
+      "releaseLockComparison": "commit-match",
+      "sampledArtifacts": [
+        {
+          "file": "cordis.patch.yml",
+          "sha256": "F5F8684B523E63F70FECB0EBAA924282196B1C7C218FB816E49BDD7DFABE9899"
+        },
+        {
+          "file": "lib/client.js",
+          "sha256": "F51BB8B6FFFA9B8905593A3B6DCB60817A0ABBD621D3EBED22F626DB4EEA7046"
+        },
+        {
+          "file": "lib/index.js",
+          "sha256": "442D2EA5908DA41055AAAE118D25FC8B0A05621D5B6DFE09B6E537138BEC8CDE"
+        },
+        {
+          "file": "package.json",
+          "sha256": "7EC7034DBCE23E6AE2205CDA98FBB623C37423328BBCB31A3F4D9BD6B8D88A00"
+        }
+      ]
+    },
+    {
+      "name": "@local/dsh-plugin-sidebar-visibility",
+      "version": "0.0.3",
+      "sourceKind": "link",
+      "portableSource": "<DSH_REPO>/dsh-plugin-sidebar-visibility",
+      "gitCommit": "737501af4c48dd17bd74ef9d6d77022d75d5aaf3",
+      "commitScope": "component",
+      "declaresBundle": true,
+      "registeredBundle": true,
+      "releaseLockedTag": "v0.0.3",
+      "releaseLockedCommit": "737501af4c48dd17bd74ef9d6d77022d75d5aaf3",
+      "releaseLockComparison": "commit-match",
+      "sampledArtifacts": [
+        {
+          "file": "cordis.patch.yml",
+          "sha256": "ABB93BC343909C35B9928B12816255F1B9CCCE6A9335C249C8BF4F6AF0763B55"
+        },
+        {
+          "file": "lib/client.js",
+          "sha256": "0FB3BDE9A5C48BCF7A56DD88BA03442CA9EA31D11B8A0FFA6C56BF4F725C8901"
+        },
+        {
+          "file": "lib/index.js",
+          "sha256": "85CAD0EED5E09767F1425767C2FFBD766CEF352988B087F52AA2C63E39A96CCE"
+        },
+        {
+          "file": "package.json",
+          "sha256": "CB3E595B75D47C19A1B3DE157E11E5BAAA54D7DD82D96BAB6F2915024AF30553"
+        }
+      ]
+    },
+    {
+      "name": "@local/dsh-ptc-multi-agent-mode",
+      "version": "0.7.0",
+      "sourceKind": "link",
+      "portableSource": "<SHARED_SKILL_ROOT>/ptc-multi-agent-control/assets/dsh-bundle",
+      "gitCommit": null,
+      "commitScope": "none",
+      "declaresBundle": true,
+      "registeredBundle": true,
+      "releaseLockedTag": null,
+      "releaseLockedCommit": null,
+      "releaseLockComparison": "not-in-components-lock",
+      "sampledArtifacts": [
+        {
+          "file": "cordis.patch.yml",
+          "sha256": "BC5945214901247747A4BCDF003C929463AF2CE58E86E1FB772CA12E0457B808"
+        },
+        {
+          "file": "package.json",
+          "sha256": "8773AF5C8AA86B1B1F1982D41DB76B918AC8900EFADE7E75023B65370100DA50"
+        }
+      ]
+    },
+    {
+      "name": "@local/dsh-subagent-acp-resilient",
+      "version": "0.2.1",
+      "sourceKind": "link",
+      "portableSource": "<DSH_REPO>/dsh-subagent-acp-resilient",
+      "gitCommit": "f5ede200eea74a324053b73199c8de564121bea5",
+      "commitScope": "umbrella",
+      "declaresBundle": false,
+      "registeredBundle": false,
+      "releaseLockedTag": "v0.2.1",
+      "releaseLockedCommit": "2959e9330caa2e9061cf419278df2445ebb837dd",
+      "releaseLockComparison": "umbrella-source-not-compared-to-component-tag",
+      "sampledArtifacts": [
+        {
+          "file": "lib/index.js",
+          "sha256": "BCD27696786D06A05B421B68F36F4EAC6D9E86EC11E152BA791A6B81D5C0E9D3"
+        },
+        {
+          "file": "package.json",
+          "sha256": "61A355ED9F4DD644ADDD815959CD5513FB469D4EEE6A12CC22BD963CF941FBA4"
+        }
+      ]
+    },
+    {
+      "name": "dsh-chat-import",
+      "version": "0.25.2",
+      "sourceKind": "package-spec",
+      "portableSource": "0.25.2",
+      "gitCommit": null,
+      "commitScope": "none",
+      "declaresBundle": true,
+      "registeredBundle": true,
+      "releaseLockedTag": null,
+      "releaseLockedCommit": null,
+      "releaseLockComparison": "not-in-components-lock",
+      "sampledArtifacts": [
+        {
+          "file": "./lib/index.mjs",
+          "sha256": "83E93B5EAB5C8C50F68055478FC8113B4452EE215F94F3381A0C4189FE6754B4"
+        },
+        {
+          "file": "cordis.patch.yml",
+          "sha256": "535BD8E40DCB930AA0FBA36581FDB8C1D5B3FF4CBAEDFF101FC55595E2236CCF"
+        },
+        {
+          "file": "lib/client.js",
+          "sha256": "2D1EF775C118977DB4541F98225990E1D34581B1A278646CAB5C9A118229E5A3"
+        },
+        {
+          "file": "package.json",
+          "sha256": "68B43EA28F3F4B3C749E61A54BA928582BE2CF676693522B73D2734D4A1313AB"
+        }
+      ]
+    },
+    {
+      "name": "dsh-config-pack",
+      "version": "0.7.0",
+      "sourceKind": "package-spec",
+      "portableSource": "github:Robert-Wang-08/dsh-config-pack#v0.7.0",
+      "gitCommit": null,
+      "commitScope": "none",
+      "declaresBundle": true,
+      "registeredBundle": true,
+      "releaseLockedTag": null,
+      "releaseLockedCommit": null,
+      "releaseLockComparison": "not-in-components-lock",
+      "sampledArtifacts": [
+        {
+          "file": "cordis.patch.yml",
+          "sha256": "B3FE4C93205AC32AA5B8EFF4479EFA63866D78FB65BB23BA884A3B997D542F7D"
+        },
+        {
+          "file": "package.json",
+          "sha256": "364074D89F685895DF10C20C354FAEEB28891E20D8BD5BEE6EC5E64D8E966322"
+        }
+      ]
+    },
+    {
+      "name": "dsh-deepseek-keypool",
+      "version": "3.4.0",
+      "sourceKind": "link",
+      "portableSource": "<DSH_REPO>/dsh-provider-failover",
+      "gitCommit": "40a99181c8f65e8603d49cc3fe7eca847143faf4",
+      "commitScope": "component",
+      "declaresBundle": true,
+      "registeredBundle": true,
+      "releaseLockedTag": "v3.4.0",
+      "releaseLockedCommit": "d0c6c2d6c1b0af78a0fbb60e89d86c4571b41f0e",
+      "releaseLockComparison": "commit-differs",
+      "sampledArtifacts": [
+        {
+          "file": "client.js",
+          "sha256": "7910DF9D448E887635A33DCA2D3E372530DC1FF7C568E03D6014A2B6655DBCB4"
+        },
+        {
+          "file": "cordis.patch.yml",
+          "sha256": "703E76C9C220E20C59477416C3C766FCAC5E364CEDB38CE6F73624CE2FD14975"
+        },
+        {
+          "file": "index.js",
+          "sha256": "49FD7AD77AA560221719C39FCAAB81626A4D5AC92B8FD3196D396C30E582228E"
+        },
+        {
+          "file": "package.json",
+          "sha256": "A65B828BD1475EFD9A0784C38EF36A77090B86A4A764E96AF8456D59B5D66510"
+        }
+      ]
+    },
+    {
+      "name": "dsh-mermaid-smooth",
+      "version": "0.1.0",
+      "sourceKind": "package-spec",
+      "portableSource": "0.1.0",
+      "gitCommit": null,
+      "commitScope": "none",
+      "declaresBundle": true,
+      "registeredBundle": true,
+      "releaseLockedTag": null,
+      "releaseLockedCommit": null,
+      "releaseLockComparison": "not-in-components-lock",
+      "sampledArtifacts": [
+        {
+          "file": "cordis.patch.yml",
+          "sha256": "7D5200A9FE9356679D84F94E2929D4A7200DC6C86A607D28691A7E7655CFAF64"
+        },
+        {
+          "file": "lib/client.js",
+          "sha256": "77F7E92D6698DD0C881B80E7E56ABCEDD178CF8ED80A036A94B771CF293670CB"
+        },
+        {
+          "file": "lib/index.js",
+          "sha256": "DE644D2F667B0EE769FF48372AE9A995FFCA6B18C8C001BA37714F51A6A0912F"
+        },
+        {
+          "file": "package.json",
+          "sha256": "81D5A471F32CC2DB3037A0FD33F73A114C251988C449D08C13A094F96D998E35"
+        }
+      ]
+    },
+    {
+      "name": "dsh-notify-bell",
+      "version": "0.12.0",
+      "sourceKind": "package-spec",
+      "portableSource": "0.12.0",
+      "gitCommit": null,
+      "commitScope": "none",
+      "declaresBundle": true,
+      "registeredBundle": true,
+      "releaseLockedTag": null,
+      "releaseLockedCommit": null,
+      "releaseLockComparison": "not-in-components-lock",
+      "sampledArtifacts": [
+        {
+          "file": "cordis.patch.yml",
+          "sha256": "4CAFE2A4EB8AA4BDC8B9C41537E81899F31809E0274C578DDC62B0458A0ED1A2"
+        },
+        {
+          "file": "package.json",
+          "sha256": "978D5BE1C112997356BDB4FBCD25A9BCE33DCDDA289503E9EAA355402D436973"
+        },
+        {
+          "file": "src/index.js",
+          "sha256": "BF3DABE07A4E198DCE7E082F0ABF839DD9FBB37D44077B4E4F6107626DE4B377"
+        }
+      ]
+    },
+    {
+      "name": "dsh-plugin-provider-badge",
+      "version": "0.2.1",
+      "sourceKind": "link",
+      "portableSource": "<DSH_REPO>/dsh-plugin-provider-badge",
+      "gitCommit": "cccdbed21c6212701739cef21c207a8cb3646448",
+      "commitScope": "component",
+      "declaresBundle": true,
+      "registeredBundle": true,
+      "releaseLockedTag": "v0.1.0",
+      "releaseLockedCommit": "84873291a3c8bdb085aee9bef4efe3b7d5b167e0",
+      "releaseLockComparison": "commit-differs",
+      "sampledArtifacts": [
+        {
+          "file": "client.js",
+          "sha256": "6ABE2CB10425D489E6C4A4B2BB9D73BB4963B5F2C7CCBA4A68A0B77EB1334934"
+        },
+        {
+          "file": "cordis.patch.yml",
+          "sha256": "C53CD211D5B2901DB61C4FE92D5137531E027E675D3CD932B5260B85CC97866B"
+        },
+        {
+          "file": "index.js",
+          "sha256": "3FA2D9AEAA0E2BFFE7B1699F60E3A7393AE878372A0D10B3E1C6E35BB8F805C6"
+        },
+        {
+          "file": "package.json",
+          "sha256": "FF213187889288BB463ACA82CCFC58F9F73A6B893E314B618C4A767376D4C92C"
+        }
+      ]
+    },
+    {
+      "name": "dsh-plugin-ptc-switches",
+      "version": "0.2.0",
+      "sourceKind": "link",
+      "portableSource": "<DSH_REPO>/dsh-plugin-ptc-switches",
+      "gitCommit": "f5ede200eea74a324053b73199c8de564121bea5",
+      "commitScope": "umbrella",
+      "declaresBundle": true,
+      "registeredBundle": true,
+      "releaseLockedTag": null,
+      "releaseLockedCommit": null,
+      "releaseLockComparison": "not-in-components-lock",
+      "sampledArtifacts": [
+        {
+          "file": "client.js",
+          "sha256": "5DE635E3BD1F546D215FD5228585ABD854F33C859568960E9EFCBE43749E901A"
+        },
+        {
+          "file": "cordis.patch.yml",
+          "sha256": "63F1720B166CC2EFD49380662771C6BA66FD97AEFCD052788AA72514CAFDAD4D"
+        },
+        {
+          "file": "index.js",
+          "sha256": "B6255052DCF1C8C2264F82C99EB19DBBDE4A12260926D536B5173017DE4C051B"
+        },
+        {
+          "file": "package.json",
+          "sha256": "57B075826E64C17E0D6CB2BDF8C0BFE0802FAC4E152E1CBEDC392992A13CE9B2"
+        }
+      ]
+    },
+    {
+      "name": "dsh-plugin-subagent-monitor",
+      "version": "0.1.0",
+      "sourceKind": "link",
+      "portableSource": "<DSH_REPO>/dsh-plugin-subagent-monitor",
+      "gitCommit": "f5ede200eea74a324053b73199c8de564121bea5",
+      "commitScope": "umbrella",
+      "declaresBundle": true,
+      "registeredBundle": true,
+      "releaseLockedTag": "v0.1.0",
+      "releaseLockedCommit": "8ae0a9918de70363490ab691f475a1baae04e42c",
+      "releaseLockComparison": "umbrella-source-not-compared-to-component-tag",
+      "sampledArtifacts": [
+        {
+          "file": "client.js",
+          "sha256": "B2B086F1346B73F3659280C15A2DF4A6870371357080EEACD234E0F95E02869E"
+        },
+        {
+          "file": "cordis.patch.yml",
+          "sha256": "CA5266EFDE93EE1C8B10A28CA1D7B542B22C7C97232D42BE5005A31DDCAD62A4"
+        },
+        {
+          "file": "index.js",
+          "sha256": "4EA112966C1522240233FCCDAAB7285BA58CE901115E4B2ACE932840CBBA5D57"
+        },
+        {
+          "file": "package.json",
+          "sha256": "5E8FBE91F08AE418955F037664B3C078A8B939E2C6C5AA3C4426D0E2BC08F2DB"
+        }
+      ]
+    }
+  ],
+  "knownMissing": [
+    "@yfwu2020/dsh-recent-sessions"
+  ],
+  "privateConfigurationComparison": "Compare per-device answers and effective configuration locally. Do not publish values, absolute paths, credentials, sessions, or raw dumps."
+}
