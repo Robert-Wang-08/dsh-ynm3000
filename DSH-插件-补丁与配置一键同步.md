@@ -39,7 +39,7 @@
 ```powershell
 pwsh -File D:\src\dsh\dsh-config-pack\scripts\install.ps1 `
   -ProfileName web `
-  -Source 'github:Robert-Wang-08/dsh-config-pack#v0.6.0'
+  -Source 'github:Robert-Wang-08/dsh-config-pack#v0.8.0'
 ```
 
 脚本会一次性代做：profile 不存在则从发行模板创建 → 写 pnpm 前置（`blockExoticSubdeps: false`、`nodeLinker: hoisted`、`allowBuilds`）→ **只调一次** `dsh plugin add` → 失败按 pnpm 错误码有界自愈重试（≤3 次）→ 校验 bundle 已登记并跑只读校验。
@@ -172,7 +172,7 @@ node D:\src\dsh\dsh-config-pack\scripts\verify.mjs --profile web
 
 ```powershell
 $pack = 'D:\src\dsh\dsh-config-pack'
-$ver  = 'v0.6.0'
+$ver  = 'v0.8.0'
 
 # 1. 升级配置包
 pwsh -File "$pack\scripts\install.ps1" -ProfileName web -Source "github:Robert-Wang-08/dsh-config-pack#$ver"
