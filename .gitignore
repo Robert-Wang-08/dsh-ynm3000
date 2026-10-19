@@ -1,2 +1,12 @@
 node_modules/
 .ptc/
+
+# 本机 ACL 修复产物：含本机路径与 SID，不进仓库
+.acl-recovery/
+
+# 模型评测产物（zip + 生成物），不属于插件/配置仓
+model-benchmark/
+
+# focus-hub 是独立 git 仓库但目前没有远程；在它有 remote 并注册为 submodule 之前，
+# 直接提交会变成 .gitmodules 里没有条目的 gitlink，克隆方只能拿到空目录。
+focus-hub/
