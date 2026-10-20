@@ -82,11 +82,11 @@ flowchart TD
 |---|---|---|
 | `dsh-archived-sessions` | 0.4.1 | 会话归档列表/查看器/删除。本地 0.4.1 **领先** npm 公开版 0.4.0，所以走本仓库 tag 而不是 npm——改回去会静默丢本地改动 |
 
-归档界面（上游自带截图）：
+归档界面（截图来自子模块仓库，钉 v0.4.1）：
 
-![归档列表](dsh-archived-sessions/docs/screenshots/archived-list.png)
+![归档列表](https://raw.githubusercontent.com/Robert-Wang-08/dsh-archived-sessions/v0.4.1/docs/screenshots/archived-list.png)
 
-![归档查看器](dsh-archived-sessions/docs/screenshots/archived-viewer.png)
+![归档查看器](https://raw.githubusercontent.com/Robert-Wang-08/dsh-archived-sessions/v0.4.1/docs/screenshots/archived-viewer.png)
 
 ### 第三方插件（按上游维护，本包只消费版本号）
 
