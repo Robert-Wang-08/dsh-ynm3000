@@ -34,11 +34,11 @@ git clone --recurse-submodules https://github.com/Robert-Wang-08/dsh-ynm3000.git
 
 没有共享盘、交给 AI 时，让 AI 读 `dsh-config-pack/docs/AI-DEVICE-SETUP.md`。生成的文件放到 `%USERPROFILE%\.dsh\device\`，再重新运行下面的命令。
 
-共享盘答案的**参考位置**是 SkillHub 下的 `dsh-device`（`device.env` 和 `route-config.json`），不提交到 Git。若你用自己的个人数据同步盘，请按此命名放置（`dsh-device\device.env`，可选 `device-answers.json` / `route-config.json`），`setup.ps1` 按该约定读取。日常 profile 是 `web`。`web-restore` 只在本机做验证，不作为提交内容。
+共享盘答案的**参考位置**：云盘同步根（本机安装实例名为 `Skill+Tool\skillhub`）下的 `dsh-device`（`device.env` 和 `route-config.json`），不提交到 Git。「SkillHub」只是本方案的参考名称——你的云盘叫什么都行，`setup.ps1` 只认 `dsh-device\device.env` 这个约定（可选 `device-answers.json` / `route-config.json`）。日常 profile 是 `web`。`web-restore` 只在本机做验证，不作为提交内容。
 
-![新设备安装](attachments/readme_setup-flow_v1.svg)
+![新设备安装](attachments/readme_setup-flow_v2.svg)
 
-英文图：[setup-flow_v1_en.svg](attachments/setup-flow_v1_en.svg)
+英文图：[setup-flow_v2_en.svg](attachments/setup-flow_v2_en.svg)
 
 ```powershell
 pwsh -File dsh-config-pack\scripts\setup.ps1 -Source 'github:Robert-Wang-08/dsh-config-pack#v0.9.0'
@@ -46,12 +46,14 @@ pwsh -File dsh-config-pack\scripts\setup.ps1 -Source 'github:Robert-Wang-08/dsh-
 
 ```mermaid
 flowchart TD
-  A["运行 setup.ps1"] --> B{"有共享盘?"}
-  B -->|有| C["读取 device.env"]
-  B -->|没有| D["模板，或让 AI 读 AI-DEVICE-SETUP.md"]
-  C --> E["install.ps1 装 Git 包"]
+  A["运行 setup.ps1（显式 -Source 钉 tag）"] --> B{"有云盘？如坚果云"}
+  B -->|有| C["读取 云盘根/dsh-device/device.env（参考命名）"]
+  B -->|没有| D["包内模板，或让 AI 读 AI-DEVICE-SETUP.md"]
+  C --> E["设 DSHPACK_* 用户变量；DSHPACK_KEY_* 密钥交互输入"]
   D --> E
-  E --> F["写入 route-config.json"]
-  F --> G["设置用户环境变量"]
-  G --> H["重启 DSH 并新开会话"]
+  E --> F["写 route-config.json（云盘副本优先）"]
+  F --> G["install.ps1 装 Git 包（前置 + 一次 add + 校验）"]
+  G --> H["默认补装可选三方组（-SkipOptional 跳过）"]
+  H --> I["验收：plugin list / verify --profile / composed 0 dangling"]
+  I --> J["重启 DSH，新开会话，实测一次路由"]
 ```
