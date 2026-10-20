@@ -62,12 +62,12 @@
 - **渠道判定**：通用配置/预设/档位表 → Git `dsh-config-pack`；设备绝对路径、key 指针名、个人路由偏好 → 共享盘 `dsh-device\` 或本机 `~/.dsh/device\`；凭据值 → 哪都不进。
 - 隐私文件备份只放 `dsh-backup-restore` 的本机 `private/`；`-Dest` 到用户目录之外需显式 `-AllowPrivateToDest`。
 
-## 7. skill 资产治理（本体唯一落点：dev store，2026-10-19 拍板）
+## 7. skill 资产治理（共享盘 store 与项目本体，2026-10-20 拍板）
 
-- 自写/内部 skill 的**唯一物理本体**统一放在 skillhub 项目内：`D:\src\ynm3000\skillhub\store\installed\<id>`。
-- 两处入口都只是**链接（junction）**，不存本体副本：
-  - `%USERPROFILE%\.agents\skills\<id>`（IDE 入口）→ 指向 dev store 本体；
-  - `D:\nutstore\Skill+Tool\skillhub\store\installed\<id>`（共享盘槽位）→ 同样只放链接，视为**内部索引**，不是 self 本体。
-- 新建 skill：打 skill-stamp（registry 分类字段保持 `self`，语义 =「本体在 store、随清单同步本体」）→ 本体落 dev store → 两处建链接 → `sync publish` 同步清单。
-- 一个 id 只允许一份物理本体；任何位置出现实心副本（尤其 nutstore 槽位）必须降级为链接或清理，防止分叉编辑。
-- 若要把某 skill 彻底改为「项目级、不同步本体」，必须从 registry.json 移除并登记进 PROJECT_SKILLS_REGISTRY.md——这会停止跨设备本体分发，仅在明确要求时执行。
+- **非项目 skill**：统一安装到 `D:\nutstore\Skill+Tool\skillhub\store\installed\<id>`，该位置是唯一物理本体；不安装到 `D:\src\ynm3000\skillhub\store`（dev store）。IDE 入口按需使用 junction / symlink 指向共享盘 store 本体。
+- **项目 skill**：权威本体留在所属项目本地目录，由项目维护；不搬入共享盘 store 或 dev store。共享盘 SkillHub store 只保留索引元数据（项目、版本、权威路径、用途、登记时间与背景），不复制技能正文、脚本或资产，不分发本体。
+- **PTC 是本项目 skill**：`ptc-multi-agent-control` 的唯一本体为 `D:\src\dsh\dsh-config-pack\packages\dsh-ptc-multi-agent-mode`；由本项目 Git 配置包维护。`%USERPROFILE%\.agents\skills\ptc-multi-agent-control` 如需保留，只能链接到此项目本体。
+- PTC 在 `D:\nutstore\Skill+Tool\skillhub\store\installed\ptc-multi-agent-control` 仅保留项目索引，不保留可安装的 `SKILL.md`、`skill.json` 或运行脚本；同时登记到共享盘 store 的 `PROJECT_SKILLS_REGISTRY.md`，从全局安装 `registry.json` 移除并显式设为 `index_only` / `pointer_only`，防止精选或收藏重新启用本体同步。
+- 自写资产继续保留 skill-stamp 的出处、owner、创建/更新时间与版本；项目级只改变落点和分发策略，不把自写 provenance 改成第三方。
+- 一个 id 只允许一份有效本体。处理旧副本前先比较并备份独有内容，再替换入口或移出安装目录；归档不参与安装、发现或同步。
+- 本规则替代此前“自写/内部 skill 统一落 dev store”的约束。其他 skill 的既有落点迁移需单独盘点，不因修改本规则批量移动无关资产。
