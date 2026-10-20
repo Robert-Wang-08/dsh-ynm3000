@@ -41,7 +41,7 @@ git clone --recurse-submodules https://github.com/Robert-Wang-08/dsh-ynm3000.git
 英文图：[setup-flow_v2_en.svg](attachments/setup-flow_v2_en.svg)
 
 ```powershell
-pwsh -File dsh-config-pack\scripts\setup.ps1 -Source 'github:Robert-Wang-08/dsh-config-pack#v0.9.0'
+pwsh -File dsh-config-pack\scripts\setup.ps1 -Source 'github:Robert-Wang-08/dsh-config-pack#v0.9.1'
 ```
 
 ```mermaid

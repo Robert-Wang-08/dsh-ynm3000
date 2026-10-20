@@ -64,7 +64,7 @@ skillhub-source: not-managed
    ```powershell
    pwsh -File <仓库根>\dsh-config-pack\scripts\setup.ps1 `
         -SharedRoot <云盘根> `
-        -Source 'github:Robert-Wang-08/dsh-config-pack#v0.9.0'
+        -Source 'github:Robert-Wang-08/dsh-config-pack#v0.9.1'
    ```
    - 显式传 `-Source`：脚本内置默认值可能落后于最新 tag。
    - 可选三方插件组（`dsh-recent-sessions`、`dshmarket`、`dsh-plugin-subagent-director`、
@@ -72,15 +72,17 @@ skillhub-source: not-managed
    - 提示 `DSHPACK_KEY_*` 时输入真实密钥（直接回车=跳过，之后可手动补用户环境变量）。
    - 若报 `ERR_PNPM_EXOTIC_SUBDEP` / `ERR_PNPM_IGNORED_BUILDS`：install.ps1 会自愈重试；
      仍失败时把完整报错给用户，不要手改配置硬闯。
-6. **验收（三条都必须过）**：
+6. **安装后偏差比较验收**（install.ps1 第 4.6 步已自动跑过一次；手动复核用同一条命令）：
    ```powershell
-   dsh plugin --profile packed list
-   node <仓库根>\dsh-config-pack\scripts\verify.mjs --profile packed
-   dsh --profile packed --dump-config > "$env:TEMP\composed.yml"
-   node <仓库根>\dsh-config-pack\scripts\verify.mjs --composed "$env:TEMP\composed.yml"
+   node <仓库根>\dsh-config-pack\scripts\verify-install.mjs --profile packed
+   # 可选：对拍另一台设备的观察基线（逐包版本 + 采样文件 SHA256）
+   node <仓库根>\dsh-config-pack\scripts\verify-install.mjs --profile packed `
+        --baseline <仓库根>\docs\verification\new-device-packed-observed-20261020.json
    ```
-   预期：依赖全部可解析（含可选组 4 件）、无 dangling；启动后无 `did not activate`、
-   无 `patch: entry ... not found`。
+   预期：核心件全 ok、可选组默认已装、bundle 登记齐全、composed 0 dangling、
+   无 `did not activate` / `patch entry not found`。
+   判读：missing(核心件) 必须处理；optional missing 若因 -SkipOptional 属预期；
+   shadowing / 设备字面量 / 偏好差异属已知设备差异，不算失败。
 7. **生效**：关掉 DSH 重新打开（首次直接 `dsh web` 启动，默认 http://127.0.0.1:3080），
    **新开一个会话**（工具表在会话启动时冻结，旧会话看不到新工具），
    在新会话里实际派发一次子代理验证路由可用。
