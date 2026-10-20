@@ -16,6 +16,10 @@ DSH Web 增强插件：在会话头部（`conversation.session.header.actions` �
 本插件是**只读可见性增强**：不写文件、不写 settings、不持凭据、不发变更类
 请求、不修改任何官方宿主包，也不注册 Conversation Node/View。
 
+实际面板（演示会话：1 个前台子代理 + 1 个后台 spawn 任务，含类型徽标 / 模式 / 状态 / keepalive 列）：
+
+![monitor-panel](docs/screenshots/monitor-panel.png)
+
 ## 安装
 
 插件由主控创建（`package.json` / `cordis.patch.yml` / `index.js` 已就位）：
