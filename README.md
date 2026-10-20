@@ -6,6 +6,7 @@ DSH 插件与配置的总仓库。各插件仍是独立仓库，这里只用 sub
 
 ```powershell
 git clone --recurse-submodules https://github.com/Robert-Wang-08/dsh-ynm3000.git D:\src\dsh
+# ↑ D:\src\dsh 只是源设备的安装实例（示例路径），按本机实际选择，后续命令同步替换。
 ```
 
 已关联：

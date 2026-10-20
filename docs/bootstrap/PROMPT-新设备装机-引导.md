@@ -4,7 +4,7 @@ owner: wang
 author: wang
 created: 2026-10-20
 updated: 2026-10-20
-version: 0.2.0
+version: 0.2.1
 asset-type: prompt
 source: dsh-ynm3000
 skillhub-source: not-managed
@@ -34,6 +34,13 @@ skillhub-source: not-managed
 - `.credentials.yaml` 不跨设备，不从共享盘找它；密钥在 setup 交互时输入。
 - 全程不要 `git push`，不要手改 profile 的 `package.json`，插件增删只用 `dsh plugin` 命令。
 
+## 路径约定（隐私：先替换再执行）
+
+下文出现的 `D:\src\dsh`（仓库根）与 `D:\nutstore\Skill+Tool\skillhub`（云盘根）只是**源设备的安装实例（示例）**，不是规定位置，也不要原样照抄进本机或报告。执行前先确定本机实际路径并全程替换：
+
+- `<仓库根>` = 第 4 步 clone 本总仓库的目标目录（安装实例：`D:\src\dsh`）；
+- `<云盘根>` = 第 3 步定位到的云盘同步根（安装实例：`D:\nutstore\Skill+Tool\skillhub`）。
+
 ## 步骤
 
 1. **前置检查**（缺什么装什么）：
@@ -42,21 +49,21 @@ skillhub-source: not-managed
    - `pnpm --version`（缺则 `npm i -g pnpm`）。
 2. **安装 DSH（钉版本）**：`npm install -g @deepseek-ai/dsh@0.2.0-rc.2`，然后 `dsh --version` 确认。
    （npm latest 已更高，但本流程只在 0.2.0-rc.2 上验证过，不要擅自换版本。）
-3. **定位云盘**：找到云盘（如坚果云）同步根下含 `dsh-device\device.env` 的目录
-   （源设备路径为 `D:\nutstore\Skill+Tool\skillhub`，本机盘符可能不同）。
+3. **定位云盘**：找到云盘（如坚果云）同步根下含 `dsh-device\device.env` 的目录，记为 `<云盘根>`
+   （源设备安装实例：`D:\nutstore\Skill+Tool\skillhub`，本机盘符可能不同）。
    若云盘未登录或该目录不存在，**停下来问用户**，不要猜路径。
-4. **克隆总仓库**（仓库群入口，含全部插件子仓库与本引导文件）：
+4. **克隆总仓库**（仓库群入口，含全部插件子仓库与本引导文件），目标目录记为 `<仓库根>`：
    ```powershell
-   git clone --recurse-submodules https://github.com/Robert-Wang-08/dsh-ynm3000.git D:\src\dsh
-   git -C D:\src\dsh submodule status   # dsh-config-pack 应在 v0.9.0 对应提交或更新
+   git clone --recurse-submodules https://github.com/Robert-Wang-08/dsh-ynm3000.git <仓库根>
+   git -C <仓库根> submodule status   # dsh-config-pack 应在 v0.9.0 对应提交或更新
    ```
-   注意：不要去找 `D:\src\ynm3000` 下的旧路径——源设备已把插件全部迁到 `D:\src\dsh`，
-   旧目录只剩 skillhub 开发 store 与历史工作区，与本任务无关。
+   （源设备安装实例：`<仓库根>` = `D:\src\dsh`。）
+   注意：不要去找源设备 `D:\src\ynm3000` 下的旧路径——那里的残留与本安装无关，插件的权威副本在本总仓库里。
 5. **一键还原**（读共享盘答案 → 设 DSHPACK_* 用户环境变量 → 写路由 → 装包进 profile `packed`
    → 默认补装可选三方插件组）：
    ```powershell
-   pwsh -File D:\src\dsh\dsh-config-pack\scripts\setup.ps1 `
-        -SharedRoot <第3步找到的共享盘根> `
+   pwsh -File <仓库根>\dsh-config-pack\scripts\setup.ps1 `
+        -SharedRoot <云盘根> `
         -Source 'github:Robert-Wang-08/dsh-config-pack#v0.9.0'
    ```
    - 显式传 `-Source`：脚本内置默认值可能落后于最新 tag。
@@ -68,9 +75,9 @@ skillhub-source: not-managed
 6. **验收（三条都必须过）**：
    ```powershell
    dsh plugin --profile packed list
-   node D:\src\dsh\dsh-config-pack\scripts\verify.mjs --profile packed
+   node <仓库根>\dsh-config-pack\scripts\verify.mjs --profile packed
    dsh --profile packed --dump-config > "$env:TEMP\composed.yml"
-   node D:\src\dsh\dsh-config-pack\scripts\verify.mjs --composed "$env:TEMP\composed.yml"
+   node <仓库根>\dsh-config-pack\scripts\verify.mjs --composed "$env:TEMP\composed.yml"
    ```
    预期：依赖全部可解析（含可选组 4 件）、无 dangling；启动后无 `did not activate`、
    无 `patch: entry ... not found`。
