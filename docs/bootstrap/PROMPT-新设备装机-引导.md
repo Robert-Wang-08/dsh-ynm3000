@@ -64,7 +64,7 @@ skillhub-source: not-managed
    ```powershell
    pwsh -File <仓库根>\dsh-config-pack\scripts\setup.ps1 `
         -SharedRoot <云盘根> `
-        -Source 'github:Robert-Wang-08/dsh-config-pack#v0.9.2'
+        -Source 'github:Robert-Wang-08/dsh-config-pack#v0.9.4'
    ```
    - 显式传 `-Source`：脚本内置默认值可能落后于最新 tag。
    - 可选三方插件组（`dsh-recent-sessions`、`dshmarket`、`dsh-plugin-subagent-director`、
