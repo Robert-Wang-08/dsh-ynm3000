@@ -33,7 +33,7 @@ git clone --recurse-submodules https://github.com/Robert-Wang-08/dsh-ynm3000.git
 
 没有共享盘、交给 AI 时，让 AI 读 `dsh-config-pack/docs/AI-DEVICE-SETUP.md`。生成的文件放到 `%USERPROFILE%\.dsh\device\`，再重新运行下面的命令。
 
-本机共享盘是 SkillHub。已经填好的答案在它下面的 `dsh-device`（`device.env` 和 `route-config.json`），不提交到 Git。日常 profile 是 `web`。`web-restore` 只在本机做验证，不作为提交内容。
+共享盘答案的**参考位置**是 SkillHub 下的 `dsh-device`（`device.env` 和 `route-config.json`），不提交到 Git。若你用自己的个人数据同步盘，请按此命名放置（`dsh-device\device.env`，可选 `device-answers.json` / `route-config.json`），`setup.ps1` 按该约定读取。日常 profile 是 `web`。`web-restore` 只在本机做验证，不作为提交内容。
 
 ![新设备安装](attachments/readme_setup-flow_v1.svg)
 

@@ -27,7 +27,9 @@ skillhub-source: not-managed
 ## 背景（渠道纪律，必须遵守）
 
 - 通用配置唯一发布源：Git `Robert-Wang-08/dsh-config-pack`（tag 发布，当前 v0.9.0）。
-- 设备个人答案在坚果云共享盘 `dsh-device\device.env`（只有变量名/路由名，**没有密钥值**）。
+- 设备个人答案的**参考位置**在坚果云共享盘 `dsh-device\device.env`（只有变量名/路由名，**没有密钥值**）。
+  若你自己另有个人数据同步盘，请按同样的命名放置：`dsh-device\device.env`，可选同目录
+  `device-answers.json` / `route-config.json`——`setup.ps1` 按此约定读取，不硬编码盘符。
 - 密钥只进用户环境变量；**绝不**把密钥写进 device.env、route-config.json、任何文件或 Git。
 - `.credentials.yaml` 不跨设备，不从共享盘找它；密钥在 setup 交互时输入。
 - 全程不要 `git push`，不要手改 profile 的 `package.json`，插件增删只用 `dsh plugin` 命令。
