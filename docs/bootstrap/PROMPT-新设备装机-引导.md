@@ -27,7 +27,7 @@ skillhub-source: not-managed
 ## 背景（渠道纪律，必须遵守）
 
 - 通用配置唯一发布源：Git `Robert-Wang-08/dsh-config-pack`（tag 发布，当前 v0.9.0）。
-- 设备个人答案的**参考位置**在坚果云共享盘 `dsh-device\device.env`（只有变量名/路由名，**没有密钥值**）。
+- 设备个人答案的**参考位置**在云盘（如坚果云）的 `dsh-device\device.env`（只有变量名/路由名，**没有密钥值**）。
   若你自己另有个人数据同步盘，请按同样的命名放置：`dsh-device\device.env`，可选同目录
   `device-answers.json` / `route-config.json`——`setup.ps1` 按此约定读取，不硬编码盘符。
 - 密钥只进用户环境变量；**绝不**把密钥写进 device.env、route-config.json、任何文件或 Git。
@@ -42,9 +42,9 @@ skillhub-source: not-managed
    - `pnpm --version`（缺则 `npm i -g pnpm`）。
 2. **安装 DSH（钉版本）**：`npm install -g @deepseek-ai/dsh@0.2.0-rc.2`，然后 `dsh --version` 确认。
    （npm latest 已更高，但本流程只在 0.2.0-rc.2 上验证过，不要擅自换版本。）
-3. **定位共享盘**：找到坚果云同步根下含 `dsh-device\device.env` 的目录
+3. **定位云盘**：找到云盘（如坚果云）同步根下含 `dsh-device\device.env` 的目录
    （源设备路径为 `D:\nutstore\Skill+Tool\skillhub`，本机盘符可能不同）。
-   若坚果云未登录或该目录不存在，**停下来问用户**，不要猜路径。
+   若云盘未登录或该目录不存在，**停下来问用户**，不要猜路径。
 4. **克隆总仓库**（仓库群入口，含全部插件子仓库与本引导文件）：
    ```powershell
    git clone --recurse-submodules https://github.com/Robert-Wang-08/dsh-ynm3000.git D:\src\dsh
