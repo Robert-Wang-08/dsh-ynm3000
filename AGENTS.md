@@ -21,6 +21,7 @@
 | `dsh-plugin-ptc-switches` | UI 插件 | `link:` 已登记 |
 | `dsh-plugin-subagent-monitor` | 监控插件 | `link:` 已登记 |
 | `dsh-subagent-acp-resilient` | 子代理插件 | `link:` 已登记 |
+| `dsh-plugin-new-session` | 会话内创建独立顶层会话的工具插件（配套 skill `new-session`） | `link:` 已登记 |
 | `dsh-permission-compat` | 插件 | **未在 web profile 依赖中——改动前先核查是否需要登记/清理** |
 | `focus-hub` | 独立应用（对应 profile `focushub-dev`） | 非 DSH 插件 |
 
@@ -71,3 +72,23 @@
 - 自写资产继续保留 skill-stamp 的出处、owner、创建/更新时间与版本；项目级只改变落点和分发策略，不把自写 provenance 改成第三方。
 - 一个 id 只允许一份有效本体。处理旧副本前先比较并备份独有内容，再替换入口或移出安装目录；归档不参与安装、发现或同步。
 - 本规则替代此前“自写/内部 skill 统一落 dev store”的约束。其他 skill 的既有落点迁移需单独盘点，不因修改本规则批量移动无关资产。
+
+## 8. 跨设备可更新约束（每次改动都要满足，2026-10-21 拍板）
+
+任何改动合入前先自问一句：**换一台设备，能不能一键拿到这次更新？** 三条硬门槛：
+
+1. **代码类 → Git 更新即生效**：源码进本仓库或对应子仓库并推送。以 `link:` 登记的插件，对方 `git pull` 后重启即得新版，**不得**要求“重新 add”才能拿到代码。禁止把生效必需的东西写进 `~/.dsh` 却指望跨设备自动——那类配置换设备必须手改，等于没交付。
+2. **配置类 → 共享盘更新即生效**：设备相关配置（绝对路径、路由偏好、key 指针名）只放共享盘 `dsh-device\`（或本机 `~/.dsh/device\`），不进 Git；通用配置走 `dsh-config-pack` 的 Git tag。改了任何一层配置，都要确认对方设备下一次运行能自动读到，不靠口头同步。
+3. **安装性变更 → 必须留一键路径**：凡需要新增/升级/重装依赖、登记新插件、跑迁移或补丁脚本的改动，必须同时交付其一：
+   - **一键脚本**（如 `dsh-config-pack/scripts/install.ps1`、批量 `dsh plugin add` 命令）；
+   - **说明文档**（`docs/bootstrap/PROMPT-*.md`、`README.md`）写清命令、顺序、回滚与验收，
+     使**跨设备的 AI 代理照文档即可完成**，不需要人类补充口头上下文。
+
+判定口径：
+
+- 只改本仓库内代码 → 满足第 1 条即可（`git pull` + 重启）；
+- 改 profile 配置 / 插件清单 / 依赖 → 必须同步更新 `README.md` 与
+  `docs/bootstrap/PROMPT-新设备装机-引导.md`（或新增等价说明），否则视为未完成；
+- 拿不准能否自动时，**按“需要安装性变更”处理**（补脚本或文档），不要赌对方环境。
+- 实例（2026-10-21）：`dsh-plugin-new-session` 采用 `dsh plugin add` + README + 装机引导，
+  放弃补丁层 `file:` 直挂——后者配置在 `~/.dsh` 且硬编码仓库路径，换设备要手改，不满足第 1 条。
