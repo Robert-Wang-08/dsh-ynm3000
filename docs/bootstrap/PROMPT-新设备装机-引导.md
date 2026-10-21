@@ -3,8 +3,8 @@ origin: self
 owner: wang
 author: wang
 created: 2026-10-20
-updated: 2026-10-20
-version: 0.2.1
+updated: 2026-10-21
+version: 0.2.2
 asset-type: prompt
 source: dsh-ynm3000
 skillhub-source: not-managed
@@ -72,6 +72,18 @@ skillhub-source: not-managed
    - 提示 `DSHPACK_KEY_*` 时输入真实密钥（直接回车=跳过，之后可手动补用户环境变量）。
    - 若报 `ERR_PNPM_EXOTIC_SUBDEP` / `ERR_PNPM_IGNORED_BUILDS`：install.ps1 会自愈重试；
      仍失败时把完整报错给用户，不要手改配置硬闯。
+   - **总仓库里的本地插件不随 `setup.ps1` 自动登记**（config-pack 只管它自己那套 bundle），
+     需在还原之后逐个 `dsh plugin add`，源码直接来自本仓库、代码不复制：
+     ```powershell
+     dsh plugin --profile <profile> add <仓库根>\dsh-subagent-acp-resilient
+     dsh plugin --profile <profile> add <仓库根>\dsh-plugin-ptc-switches
+     dsh plugin --profile <profile> add <仓库根>\dsh-plugin-subagent-monitor
+     dsh plugin --profile <profile> add <仓库根>\dsh-plugin-new-session
+     ```
+     逐个 add：参数顺序即 bundle 顺序，不要与 config-pack 混在同一次调用里。
+     登记后 `git -C <仓库根> pull` 即更新这些插件，**不需要重新 add**。
+     确认方法：`dsh plugin --profile <profile> list` 里能看到它们，且
+     `dsh --profile <profile> --dump-config` 无 `patch: entry ... not found`。
 6. **安装后偏差比较验收**（install.ps1 第 4.6 步已自动跑过一次；手动复核用同一条命令）：
    ```powershell
    node <仓库根>\dsh-config-pack\scripts\verify-install.mjs --profile packed
