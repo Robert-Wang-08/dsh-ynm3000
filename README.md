@@ -97,17 +97,14 @@ pwsh -File dsh-config-pack\scripts\update.ps1 -SkipOptional       # 不动可选
 | `dsh-plugin-new-session` | 0.2.0 | 会话内一句话开**独立顶层会话**（等价 GUI「新建会话」，不是 subagent）：`new_session` 调 `sessionController.create/rename/prompt`，默认继承当前会话的**工作区**，可带标题与首条消息；配套项目级 skill `new-session` | 官方把该能力只留给 GUI 的 `session/create` RPC，agent 工具集里没有，自写补齐 |
 | `dsh-permission-compat` | 0.1.0 | **宿主补丁工具**：直接改写已装 dsh 模块（sandbox/pwsh/bash/fs）修宿主权限行为 | 不能作为 `dsh plugin` 依赖安装（带外 apply/verify/revert，带 .bak 备份），锁里标 `installable: false` |
 
-`dsh-plugin-new-session` 走**补丁层自动加载**，不做 `dsh plugin add`：在 profile 的
-`cordis.patch.yml` 末尾挂一行本地路径，加载器直接 import（绝对路径会被规范化为 `file:` URL）。
+`dsh-plugin-new-session` 在新设备上登记一次，之后 `git pull` 即得后续更新
+（登记是 `link:` 依赖，指向本仓库目录，不复制代码）：
 
-```yaml
-- insert:
-    - id: new-session
-      name: 'D:/src/dsh/dsh-plugin-new-session/index.js'
+```powershell
+git -C D:\src\dsh pull
+dsh plugin --profile web add D:\src\dsh\dsh-plugin-new-session
+# 重启 dsh web，并新开一个会话（工具表在会话启动时生成）
 ```
-
-之后 `git -C D:\src\dsh pull` → 重启 dsh → 新开会话即得新版，无需重装、不占
-`dsh plugin` 登记位。换设备只改这一行里的仓库根路径。
 
 ### 上游 fork（本地改动领先上游）
 
