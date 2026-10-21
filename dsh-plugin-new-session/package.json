@@ -1,0 +1,39 @@
+{
+  "name": "dsh-plugin-new-session",
+  "description": "在 DSH 会话内通过 new_session 工具创建独立顶层会话（非 subagent），默认继承当前会话的工作区，支持标题与首条消息。",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "index.js",
+    "cordis.patch.yml",
+    "README.md"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "dshAsset": {
+    "origin": "self",
+    "author": "wang",
+    "created": "2026-10-20",
+    "updated": "2026-10-20",
+    "assetType": "dsh-plugin",
+    "source": "local"
+  },
+  "keywords": [
+    "dsh",
+    "deepseek",
+    "deepseek-harness",
+    "dsh-plugin",
+    "session",
+    "new-session"
+  ],
+  "license": "MIT"
+}

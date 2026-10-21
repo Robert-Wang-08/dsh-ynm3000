@@ -22,8 +22,9 @@ git clone --recurse-submodules https://github.com/Robert-Wang-08/dsh-ynm3000.git
 - `dsh-plugin-sidebar-visibility`
 - `dsh-provider-failover`
 
-下面三份还没有独立远程仓库，源码直接放在本仓库里：
+下面四份还没有独立远程仓库，源码直接放在本仓库里：
 
+- `dsh-plugin-new-session`
 - `dsh-plugin-ptc-switches`
 - `dsh-plugin-subagent-monitor`
 - `dsh-subagent-acp-resilient`
@@ -93,7 +94,16 @@ pwsh -File dsh-config-pack\scripts\update.ps1 -SkipOptional       # 不动可选
 
 ![monitor-panel](dsh-plugin-subagent-monitor/docs/screenshots/monitor-panel.png)
 | `dsh-plugin-ptc-switches` | 0.2.0 | PTC 开关的热切换 UI（不改配置文件即可开关各模式） | — |
+| `dsh-plugin-new-session` | 0.2.0 | 会话内一句话开**独立顶层会话**（等价 GUI「新建会话」，不是 subagent）：`new_session` 调 `sessionController.create/rename/prompt`，默认继承当前会话的**工作区**，可带标题与首条消息；配套项目级 skill `new-session` | 官方把该能力只留给 GUI 的 `session/create` RPC，agent 工具集里没有，自写补齐 |
 | `dsh-permission-compat` | 0.1.0 | **宿主补丁工具**：直接改写已装 dsh 模块（sandbox/pwsh/bash/fs）修宿主权限行为 | 不能作为 `dsh plugin` 依赖安装（带外 apply/verify/revert，带 .bak 备份），锁里标 `installable: false` |
+
+`dsh-plugin-new-session` 在新设备上登记一次，之后 `git pull` 即得后续更新：
+
+```powershell
+git -C D:\src\dsh pull
+dsh plugin --profile web add D:\src\dsh\dsh-plugin-new-session
+# 重启 dsh web，并新开一个会话（工具表在会话启动时生成）
+```
 
 ### 上游 fork（本地改动领先上游）
 

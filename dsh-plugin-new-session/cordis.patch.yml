@@ -1,0 +1,10 @@
+# dsh-plugin-new-session bundle patch.
+# Applied when the plugin is installed via
+#   dsh plugin --profile <profile> add <path-to-this-package>
+#
+# 纯 host 半：注册 new_session 工具，转发到 ctx.sessionController.create /
+# rename / prompt，创建的是独立顶层 Session（header 无 parentSession、
+# 无 origin: subagent），与 GUI「新建会话」等价。
+- insert:
+    - id: new-session
+      name: dsh-plugin-new-session
