@@ -21,13 +21,31 @@ DSH 0.2.0-rc.2 里，agent 可见的工具集中**没有**创建顶层会话的�
 `parentSession`、**不带** `origin: 'subagent'`，因此是普通顶层会话，会出现在 GUI
 侧边栏会话列表里，并且在本对话结束后继续存在。
 
-## 安装
+## 安装（自动加载，**不需要** `dsh plugin add`）
 
-```powershell
-dsh plugin --profile web add D:\src\dsh\dsh-plugin-new-session
+本插件不进 profile 的 `dependencies` / `bundles`，而是在 profile 补丁层
+（`~/.dsh/profiles/<profile>/cordis.patch.yml`）里挂一条本地路径，由 DSH 加载器
+直接 import。cordis 会把绝对路径规范化为 `file:` URL，所以：
+
+- 不占 `dsh plugin` 的登记位，`dsh plugin list` 里看不到它；
+- 仓库 `git pull` 之后重启 DSH 即得新版，无需重装；
+- 换设备只改这一行的仓库根路径。
+
+在 profile 补丁层末尾追加：
+
+```yaml
+- insert:
+    - id: new-session
+      name: 'D:/src/dsh/dsh-plugin-new-session/index.js'
 ```
 
+`name` 必须指向**入口文件**本身；写目录会触发 Node ESM 的目录导入错误。
+
 然后重启 `dsh web` 并**新开一个会话**（工具表在会话启动时生成，旧会话看不到新工具）。
+
+如果确实想走标准插件登记（会被 `dsh plugin list` 管理），也可以
+`dsh plugin --profile web add D:\src\dsh\dsh-plugin-new-session`，
+但那样每次换设备都要 add，且会和补丁层的插入重复，二者只能选一个。
 
 ## 工具签名
 
