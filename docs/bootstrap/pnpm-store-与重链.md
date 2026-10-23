@@ -47,8 +47,11 @@ pnpm config get store-dir      # 回读确认，不得为 undefined
 
 ## 4. 重链一个 profile（改配置之后必做）
 
-> ⚠️ **目标 profile 不能正在运行**。Windows 会锁住 `node_modules` 里的原生模块，重装必失败。
-> 本机 `dsh --profile web` 是常驻服务，重链 `web` 必须先退出 DSH。
+> **先停 DSH 是稳妥做法，但热重链也走得通（2026-10-23 实测）**：NTFS 允许重命名正在运行
+> profile 的 `node_modules`，`pnpm install` 能跑完、`dsh plugin list` 也能通过验收。
+> 但运行中的进程仍持有旧的内存映像（句柄指向已被删除的文件），所以**必须重启该 profile**
+> 才算真正验收——「磁盘正确」不等于「进程正确」。要省一次停机就热重链 + 事后重启验证；
+> 要求确定性就老老实实先停。
 
 ```powershell
 $profile = "$env:USERPROFILE\.dsh\profiles\<profile>"
