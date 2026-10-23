@@ -26,7 +26,7 @@ skillhub-source: not-managed
 
 ## 背景（渠道纪律，必须遵守）
 
-- 通用配置唯一发布源：Git `Robert-Wang-08/dsh-config-pack`（tag 发布，当前 v0.9.6）。
+- 通用配置唯一发布源：Git `Robert-Wang-08/dsh-config-pack`（tag 发布，当前 v0.10.4）。
 - 设备个人答案的**参考位置**在云盘（如坚果云）的 `dsh-device\device.env`（只有变量名/路由名，**没有密钥值**）。
   若你自己另有个人数据同步盘，请按同样的命名放置：`dsh-device\device.env`，可选同目录
   `device-answers.json` / `route-config.json`——`setup.ps1` 按此约定读取，不硬编码盘符。
@@ -55,7 +55,7 @@ skillhub-source: not-managed
 4. **克隆总仓库**（仓库群入口，含全部插件子仓库与本引导文件），目标目录记为 `<仓库根>`：
    ```powershell
    git clone --recurse-submodules https://github.com/Robert-Wang-08/dsh-ynm3000.git <仓库根>
-   git -C <仓库根> submodule status   # dsh-config-pack 应在 v0.9.6 对应提交或更新
+   git -C <仓库根> submodule status   # dsh-config-pack 应在 v0.10.4 对应提交或更新
    ```
    （源设备安装实例：`<仓库根>` = `D:\src\dsh`。）
    注意：不要去找源设备 `D:\src\ynm3000` 下的旧路径——那里的残留与本安装无关，插件的权威副本在本总仓库里。
@@ -63,10 +63,10 @@ skillhub-source: not-managed
    → 默认补装可选三方插件组）：
    ```powershell
    pwsh -File <仓库根>\dsh-config-pack\scripts\setup.ps1 `
-        -SharedRoot <云盘根> `
-        -Source 'github:Robert-Wang-08/dsh-config-pack#v0.9.6'
+        -SharedRoot <云盘根>
    ```
-   - 显式传 `-Source`：脚本内置默认值可能落后于最新 tag。
+   - 不传 `-Source` 即自动取远端最新 tag（install.ps1 内置解析）；只有要钉死版本时才显式传
+     `-Source 'github:Robert-Wang-08/dsh-config-pack#vX.Y.Z'`。
    - 可选三方插件组（`dsh-recent-sessions`、`dshmarket`、`dsh-plugin-subagent-director`、
      `dsh-palette`）**默认安装**；用户明确不要时加 `-SkipOptional` 整组跳过。
    - 提示 `DSHPACK_KEY_*` 时输入真实密钥（直接回车=跳过，之后可手动补用户环境变量）。
