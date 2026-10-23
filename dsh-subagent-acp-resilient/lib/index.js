@@ -100,6 +100,42 @@ const DECLARED_CONFIG_KEYS = Object.freeze([
 ]);
 /** An unknown key shaped like a protection bound is a silent no-op; it must be reported. */
 const PROTECTION_KEY_PATTERN = /(timeout|idle|dispose|grace|activity|recovery|settle|scan|guard)/i;
+/** Upper bound on cause text carried into the diagnostic; the service layer truncates again at 4096 bytes. */
+const MAX_CAUSE_DETAIL_CHARS = 2000;
+/**
+ * Render the upstream failure detail retained on the Error cause chain.
+ * The caller needs actionable reasons (HTTP status, quota, auth, limit); the
+ * service layer applies its own 4096-byte cap on the final diagnostic.
+ * @param cause - original failure, possibly an AggregateError or carrying a cause chain.
+ * @returns de-duplicated single-line detail, or undefined when nothing is available.
+ */
+function causeDetail(cause) {
+	if (cause === void 0 || cause === null) return void 0;
+	const parts = [];
+	const visit = (value, depth) => {
+		if (value === void 0 || value === null || depth > 3) return;
+		if (value instanceof AggregateError && Array.isArray(value.errors)) {
+			for (const inner of value.errors) visit(inner, depth + 1);
+			return;
+		}
+		const text = value instanceof Error ? value.message : String(value);
+		const trimmed = typeof text === "string" ? text.trim() : "";
+		if (trimmed.length > 0) parts.push(trimmed.split(/ +/).join(" "));
+		if (value instanceof Error && value.cause !== void 0) visit(value.cause, depth + 1);
+	};
+	visit(cause, 0);
+	if (parts.length === 0) return void 0;
+	const joined = [...new Set(parts)].join(" | ");
+	return joined.length > MAX_CAUSE_DETAIL_CHARS ? joined.slice(0, MAX_CAUSE_DETAIL_CHARS) + "..." : joined;
+}
+/** Attach the upstream detail to the fixed facts so every diagnostics path can render it. */
+function withCauseDetail(facts, cause) {
+	const detail = causeDetail(cause);
+	return detail === void 0 ? facts : {
+		...facts,
+		detail
+	};
+}
 /** Fixed safe failure text derived only from provider-owned structured facts. */
 function failureDiagnostic(facts) {
 	const fields = [
@@ -124,20 +160,22 @@ function failureDiagnostic(facts) {
 	if (facts.processState !== void 0) fields.push(`process: ${facts.processState}`);
 	if (facts.rangeQuiesced !== void 0) fields.push(`range quiesced: ${facts.rangeQuiesced}`);
 	if (facts.tests !== void 0) fields.push(`tests: ${facts.tests}`);
-	return `Subagent failure (${fields.join("; ")})`;
+	const headline = `Subagent failure (${fields.join("; ")})`;
+	return facts.detail === void 0 ? headline : headline + "\ncause: " + facts.detail;
 }
 /** Fixed permission fact; ACP tool titles and option text never enter it. */
 function permissionDiagnostic(permission) {
 	return `ACP unattended decision (policy: ${permission.policy}; request: ${permission.request}; decision: ${permission.decision})`;
 }
 /** Put the operation failure first, followed by the latest permission decision. */
-function diagnosticText(facts, permission) {
-	const failure = failureDiagnostic(facts);
-	return permission === void 0 ? failure : `${failure}\n${permissionDiagnostic(permission)}`;
+function diagnosticText(facts, permission, cause) {
+	const failure = failureDiagnostic(withCauseDetail(facts, cause));
+	return permission === void 0 ? failure : failure + "\n" + permissionDiagnostic(permission);
 }
 var AcpRunFailure = class extends Error {
 	constructor(facts, cause) {
-		super(`subagent-acp: ${failureDiagnostic(facts)}`, { cause });
+		const merged = withCauseDetail(facts, cause);
+		super(`subagent-acp: ${failureDiagnostic(merged)}`, { cause });
 		this.name = "AcpRunFailure";
 	}
 };
@@ -942,7 +980,7 @@ async function startAcpRun(request, spec) {
 							stage: "process",
 							category: "process-exit",
 							outcome
-						}, latestPermission);
+						}, latestPermission, error);
 					}
 					throw processFailure ?? error;
 				}

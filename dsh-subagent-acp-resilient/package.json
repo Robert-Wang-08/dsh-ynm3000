@@ -1,6 +1,6 @@
 {
   "name": "@local/dsh-subagent-acp-resilient",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "private": true,
   "type": "module",
   "main": "lib/index.js",
@@ -42,7 +42,7 @@
     "author": "wang",
     "created": "2026-10-13",
     "updated": "2026-10-14",
-    "version": "0.2.1",
+    "version": "0.2.2",
     "managedBy": "workspace",
     "source": "upstream-patch",
     "assetType": "dsh-plugin",
