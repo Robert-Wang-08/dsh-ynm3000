@@ -95,6 +95,9 @@ skillhub-source: not-managed
    无 `did not activate` / `patch entry not found`。
    判读：missing(核心件) 必须处理；optional missing 若因 -SkipOptional 属预期；
    shadowing / 设备字面量 / 偏好差异属已知设备差异，不算失败。
+   **若 `dsh plugin` 报 `ERR_PNPM_UNEXPECTED_STORE` 或 `ERR_PNPM_PREPARE_PACKAGE`**：
+   这是 pnpm store 与本机 profile 的 `.modules.yaml` 记录不一致，按
+   `docs/bootstrap/pnpm-store-与重链.md` 先统一 store 再重链该 profile，然后回到本步骤。
 7. **生效**：关掉 DSH 重新打开（首次直接 `dsh web` 启动，默认 http://127.0.0.1:3080），
    **新开一个会话**（工具表在会话启动时冻结，旧会话看不到新工具），
    在新会话里实际派发一次子代理验证路由可用。
