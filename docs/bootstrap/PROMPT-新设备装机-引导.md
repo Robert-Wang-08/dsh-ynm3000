@@ -102,7 +102,7 @@ skillhub-source: not-managed
      - 只装 DSH 侧插件时**不要**跑网关脚本（`tools/restart-gateway.ps1`、`tools/apply-*.ps1` 属 OpenClaw 网关侧，见 `dsh-wechat-hitl/AGENT-USAGE.md`）。
      - 验收：`node <仓库根>\dsh-wechat-hitl\tools\switch-hitl.mjs --show` 的 `patchMounted` 各 profile 均 `present: true`（重复跑 `--state running` 应为 `action: unchanged`）；`dsh --profile <profile> --dump-config` 含 `- id: wechat-hitl` 且无 `patch: entry ... not found` / `did not activate`。
      - 回滚：`node <仓库根>\dsh-wechat-hitl\tools\switch-hitl.mjs --state stopped`（摘挂载 + 留备份），或直接删掉 profile `node_modules` 下该目录。
-     - **已知设备字面量（换设备必须改）**：`lib/hitl-store.js` 的 `PATHS.workdir`（源设备 `D:\nutstore\1.logseq`）、`workspaceKey`、`PATHS.node`（源设备 `C:\openclaw-runtime\node.exe`）。改完跑 `node <仓库根>\dsh-wechat-hitl\test\switch.test.mjs`（期望 15 pass / 0 fail）。
+     - **已知设备字面量（换设备必须改）**：`lib/hitl-store.js` 的 `PROD_STATE_DIR`（捕获包副本回落用的规范绝对路径，源设备 `D:\src\dsh\dsh-wechat-hitl\state`）、`PATHS.workdir`（源设备 `D:\nutstore\1.logseq`）、`workspaceKey`、`PATHS.node`（源设备 `C:\openclaw-runtime\node.exe`）。日常可先用 `DSH_WECHAT_HITL_STATE` 整体覆盖状态目录，不必改代码。改完跑 `node <仓库根>\dsh-wechat-hitl\test\switch.test.mjs`（期望 15 pass / 0 fail）。
 6. **安装后偏差比较验收**（install.ps1 第 4.6 步已自动跑过一次；手动复核用同一条命令）：
    ```powershell
    node <仓库根>\dsh-config-pack\scripts\verify-install.mjs --profile packed
