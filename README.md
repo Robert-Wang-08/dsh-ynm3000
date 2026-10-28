@@ -21,6 +21,9 @@ git clone --recurse-submodules https://github.com/Robert-Wang-08/dsh-ynm3000.git
 - `dsh-plugin-provider-badge`
 - `dsh-plugin-sidebar-visibility`
 - `dsh-provider-failover`
+- `dsh-wechat-hitl`
+
+`dsh-wechat-hitl` 不走 `link:`：它以**目录副本**装进 `profiles/{web,headless}/node_modules/dsh-wechat-hitl`，再由该 profile 的 `cordis.patch.yml` 里 `- insert: wechat-hitl` 挂载（片段由 `dsh-wechat-hitl/tools/switch-hitl.mjs` 管理，路径跟随 `DSH_HOME`）。因此改代码后要**重新拷一次**到 profile，不像 `link:` 插件那样 `git pull` 即生效。装机与验收步骤见 [docs/bootstrap/PROMPT-新设备装机-引导.md](docs/bootstrap/PROMPT-新设备装机-引导.md) 第 5 步。
 
 下面四份还没有独立远程仓库，源码直接放在本仓库里：
 

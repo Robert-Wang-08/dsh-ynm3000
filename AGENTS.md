@@ -23,6 +23,7 @@
 | `dsh-subagent-acp-resilient` | 子代理插件 | `link:` 已登记 |
 | `dsh-plugin-new-session` | 会话内创建独立顶层会话的工具插件（配套 skill `new-session`） | `link:` 已登记 |
 | `dsh-permission-compat` | 插件 | **未在 web profile 依赖中——改动前先核查是否需要登记/清理** |
+| `dsh-wechat-hitl` | 微信人工确认回环：DSH 侧插件 + OpenClaw 网关插件 + CLI + 单测（2026-10-28 从 logseq 库 `70-WorkSpace/wechat-hitl-20261026` 迁入，旧路径保留 junction） | 以目录形式装入 `profiles/{web,headless}/node_modules/dsh-wechat-hitl`，`cordis.patch.yml` 里 `- insert: wechat-hitl` 挂载；未走 `dsh plugin add` |
 | `focus-hub` | 独立应用（对应 profile `focushub-dev`） | 非 DSH 插件 |
 
 登记状态以 `~/.dsh/profiles/<profile>/package.json` + cordis 配置的 bundles 顺序为准，**不要凭记忆断言**；核查命令：`dsh plugin --profile web list`。

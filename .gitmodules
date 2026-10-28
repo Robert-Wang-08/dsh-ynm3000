@@ -22,3 +22,7 @@
 	path = dsh-provider-failover
 	url = https://github.com/Robert-Wang-08/dsh-provider-failover
 	branch = master
+[submodule "dsh-wechat-hitl"]
+	path = dsh-wechat-hitl
+	url = https://github.com/Robert-Wang-08/dsh-wechat-hitl.git
+	branch = main

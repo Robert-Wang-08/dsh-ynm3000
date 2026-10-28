@@ -3,8 +3,8 @@ origin: self
 owner: wang
 author: wang
 created: 2026-10-20
-updated: 2026-10-21
-version: 0.2.2
+updated: 2026-10-29
+version: 0.3.0
 asset-type: prompt
 source: dsh-ynm3000
 skillhub-source: not-managed
@@ -57,6 +57,10 @@ skillhub-source: not-managed
    git clone --recurse-submodules https://github.com/Robert-Wang-08/dsh-ynm3000.git <仓库根>
    git -C <仓库根> submodule status   # dsh-config-pack 应在 v0.10.4 对应提交或更新
    ```
+   输出里应含 7 个 submodule：`dsh-archived-sessions`、`dsh-config-pack`、`dsh-permission-compat`、
+   `dsh-plugin-provider-badge`、`dsh-plugin-sidebar-visibility`、`dsh-provider-failover`、
+   `dsh-wechat-hitl`。行首是 `-` 表示未初始化（补 `git -C <仓库根> submodule update --init <path>`），
+   `+` 表示工作区与记录不一致。
    （源设备安装实例：`<仓库根>` = `D:\src\dsh`。）
    注意：不要去找源设备 `D:\src\ynm3000` 下的旧路径——那里的残留与本安装无关，插件的权威副本在本总仓库里。
 5. **一键还原**（读共享盘答案 → 设 DSHPACK_* 用户环境变量 → 写路由 → 装包进 profile `packed`
@@ -84,6 +88,21 @@ skillhub-source: not-managed
      登记后 `git -C <仓库根> pull` 即更新这些插件，**不需要重新 add**。
      确认方法：`dsh plugin --profile <profile> list` 里能看到它们，且
      `dsh --profile <profile> --dump-config` 无 `patch: entry ... not found`。
+   - **`dsh-wechat-hitl`（微信人工确认回环）不走 `dsh plugin add`**：源码在
+     `<仓库根>\dsh-wechat-hitl\pkg\dsh-wechat-hitl`，运行时必须是 profile `node_modules` 下的
+     **目录副本**，再由该 profile 的 `cordis.patch.yml` 挂载：
+     ```powershell
+     $src = '<仓库根>\dsh-wechat-hitl\pkg\dsh-wechat-hitl'
+     $dst = "$env:USERPROFILE\.dsh\profiles\<profile>\node_modules\dsh-wechat-hitl"
+     New-Item -ItemType Directory -Force -Path $dst | Out-Null
+     Copy-Item "$src\*" $dst -Recurse -Force
+     node <仓库根>\dsh-wechat-hitl\tools\switch-hitl.mjs --state running --profiles <profile>
+     ```
+     - `switch-hitl.mjs` 的 patch 路径跟随 `DSH_HOME`（缺省 `~/.dsh`），**换设备不用改代码**；写前自动留 `.bak-before-switch-<ts>`。
+     - 只装 DSH 侧插件时**不要**跑网关脚本（`tools/restart-gateway.ps1`、`tools/apply-*.ps1` 属 OpenClaw 网关侧，见 `dsh-wechat-hitl/AGENT-USAGE.md`）。
+     - 验收：`node <仓库根>\dsh-wechat-hitl\tools\switch-hitl.mjs --show` 的 `patchMounted` 各 profile 均 `present: true`（重复跑 `--state running` 应为 `action: unchanged`）；`dsh --profile <profile> --dump-config` 含 `- id: wechat-hitl` 且无 `patch: entry ... not found` / `did not activate`。
+     - 回滚：`node <仓库根>\dsh-wechat-hitl\tools\switch-hitl.mjs --state stopped`（摘挂载 + 留备份），或直接删掉 profile `node_modules` 下该目录。
+     - **已知设备字面量（换设备必须改）**：`lib/hitl-store.js` 的 `PATHS.workdir`（源设备 `D:\nutstore\1.logseq`）、`workspaceKey`、`PATHS.node`（源设备 `C:\openclaw-runtime\node.exe`）。改完跑 `node <仓库根>\dsh-wechat-hitl\test\switch.test.mjs`（期望 15 pass / 0 fail）。
 6. **安装后偏差比较验收**（install.ps1 第 4.6 步已自动跑过一次；手动复核用同一条命令）：
    ```powershell
    node <仓库根>\dsh-config-pack\scripts\verify-install.mjs --profile packed
