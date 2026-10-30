@@ -128,6 +128,27 @@ dsh plugin --profile web add D:\src\dsh\dsh-plugin-new-session
 | `dsh-chat-import` | 0.25.2 | 外部聊天记录导入（interchange v1） |
 | `dsh-mermaid-smooth` | 0.1.0 | mermaid 图渲染体验优化 |
 | `dsh-notify-bell` | 0.12.0 | 桌面通知铃（上游无 repository 字段，按 npm 包名+版本定位） |
+| `dsh-embedded-browser` | 0.3.0 | **右侧栏内嵌浏览器**：一个 Chromium 跑在 DSH 宿主里，每个会话有自己的标签页；AI 用 `browser_embedded_*`（CDP）读页/点击/填表/截图，人在右侧栏同一个标签页里接管（登录、扫码、短信码、CAPTCHA），所有会话共享一个持久 profile，登录一次到处可用 |
+
+内嵌浏览器在本机有两处必须显式配置的差异（换设备先核对，否则插件装了也不工作）：
+
+1. **`browserPath`**：上游自动探测只沿 Linux 的 `PATH` 找 `google-chrome-stable` / `chromium` 这类名字，再退回
+   `~/.cache/{ms-playwright,puppeteer}`。Windows 两处都不命中，启动时直接抛
+   `no Chrome/Chromium binary found` —— 必须显式给 Chrome 可执行路径。
+2. **`lazyTools`**：默认 `true` 时 10 个 `browser_embedded_*` 工具被 `browser-use` 技能门闸挡在门后
+   （`lib/lazy.js` 里 `SKILL_NAME` 硬编码）。本机没装该技能，门闸永远不开，模型只会说工具不存在；
+   设 `lazyTools: false` 改成加载即注册。日后装了 `browser-use` 技能可删掉这一行回到懒注册。
+
+两处都写在 profile 的 `cordis.patch.yml`（`- id: embedded-browser` 整键覆盖 config）：
+
+```yaml
+- id: embedded-browser
+  config:
+    browserPath: 'C:\Program Files\Google\Chrome\Application\chrome.exe'
+    lazyTools: false
+```
+
+改完必须**重启 DSH 并新开会话**（工具表在会话启动时生成，旧会话看不到新工具）。
 
 ### 可选三方组（默认装，`-SkipOptional` 整组跳过；清单见 `assets/optional-components.json`）
 

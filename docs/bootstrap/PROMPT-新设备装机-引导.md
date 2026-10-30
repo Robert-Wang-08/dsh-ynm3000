@@ -88,6 +88,23 @@ skillhub-source: not-managed
      登记后 `git -C <仓库根> pull` 即更新这些插件，**不需要重新 add**。
      确认方法：`dsh plugin --profile <profile> list` 里能看到它们，且
      `dsh --profile <profile> --dump-config` 无 `patch: entry ... not found`。
+    - **可选：内嵌浏览器（会话界面右侧栏的浏览器 tab）**——`dsh-embedded-browser` 0.3.0，装的是 npm 包，不是本仓库子模块。
+     Chromium 跑在 DSH 宿主里，每个会话一个标签页；AI 用 `browser_embedded_*` 经 CDP 驱动，人在右侧栏同一个标签页接管（登录/扫码/短信码/CAPTCHA）。
+     Windows 上下面两步都不能省，缺任一项装了也不工作：
+     ```powershell
+     dsh plugin --profile <profile> add dsh-embedded-browser
+     ```
+     再在该 profile 的 `cordis.patch.yml` 末尾追加（`config` 是整键覆盖，只写要改的字段即可）：
+     ```yaml
+     - id: embedded-browser
+     config:
+       browserPath: 'C:\Program Files\Google\Chrome\Application\chrome.exe'   # 上游只探测 Linux 名字与 ~/.cache，Windows 必填
+       lazyTools: false                                   # 没装 browser-use 技能时门闸不会开，工具永远不发布
+     ```
+     验收：`dsh --profile <profile> --dump-config` 里出现 `- id: embedded-browser` 且带 `lazyTools: false`；
+     重启 DSH 后 `GET http://127.0.0.1:3080/api/dsh-embedded-browser/health` 返回 `{"ok":true,"version":"0.3.0",...}`；
+     新开会话让 AI 调 `browser_embedded_navigate`，右侧栏会自己弹出该会话的 Browser tab。
+     回退：`dsh plugin --profile <profile> remove dsh-embedded-browser`（`%USERPROFILE%\.dsh\embedded-browser\profile` 保留，登录态不丢）。
    - **`dsh-wechat-hitl`（微信人工确认回环）不走 `dsh plugin add`**：源码在
      `<仓库根>\dsh-wechat-hitl\pkg\dsh-wechat-hitl`，运行时必须是 profile `node_modules` 下的
      **目录副本**，再由该 profile 的 `cordis.patch.yml` 挂载：
