@@ -301,9 +301,23 @@ if ($RepairDetached -and -not $PlanOnly) {
 		$default = Get-GitLine -Repo $s.Path -GitArgs @('symbolic-ref', '--short', '--quiet', 'refs/remotes/origin/HEAD')
 		if ([string]::IsNullOrWhiteSpace($default)) { Write-Warn2 "$($s.Name) : origin/HEAD 未设置，跳过游离 HEAD 修复"; continue }
 		$branchName = ($default -replace '^origin/', '')
+
+		# 安全规则：本地分支已存在、且分支上有云端未含的提交时，绝不动它。
+		# git checkout -B 会把分支指针硬挪到 origin，那些提交就只能靠 reflog 找回
+		# （2026-11-03 复查 badge 仓库时确认了该隐患：那次本地分支恰好是纯落后，才没丢东西）。
+		# 反过来，分支严格落后 origin 时用 -B 到 origin 尖端是纯快进，不会丢提交，
+		# 还能带着当前游离 HEAD 上的本地改动一起过去，所以那种情况仍走 -B。
+		$branchRef = Get-GitLine -Repo $s.Path -GitArgs @('rev-parse', '--verify', '--quiet', "refs/heads/$branchName")
+		if (-not [string]::IsNullOrWhiteSpace($branchRef)) {
+			$aheadLocal = Get-GitLine -Repo $s.Path -GitArgs @('rev-list', '--count', "$default..refs/heads/$branchName")
+			if ($aheadLocal -match '^\d+$' -and [int]$aheadLocal -gt 0) {
+				Write-Err "$($s.Name) : 本地分支 $branchName 有 $aheadLocal 个云端未含的提交，拒绝覆盖，请人工合并后再跑"
+				continue
+			}
+		}
 		$fix = Get-GitExit -Repo $s.Path -GitArgs @('checkout', '-B', $branchName, $default)
 		if ($fix.Exit -eq 0) {
-			Write-Ok "$($s.Name) : 游离 HEAD 已切回分支 $branchName"
+			Write-Ok "$($s.Name) : 游离 HEAD 已切回分支 $branchName（= $default，无提交丢失）"
 			$repaired.Add($s.Name)
 		} else {
 			Write-Err "$($s.Name) : 游离 HEAD 修复失败：$($fix.Text)"
