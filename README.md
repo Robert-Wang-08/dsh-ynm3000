@@ -80,6 +80,20 @@ pwsh -File dsh-config-pack\scripts\update.ps1 -SkipOptional       # 不动可选
 
 边界：设备个人答案与密钥不动（密钥只在用户环境变量）；云盘 `route-config.json` / 个人答案有变更时用 `pwsh scripts/setup.ps1 -UpdateRoutes` 同步路由；源设备 `web` 这类 link: 开发态 profile，`git pull` + 重启即生效，不走本流程。
 
+## 本机研发：一键提交与备份
+
+改了插件/配置之后要把本工作区（根仓库 + 6 个子仓库）的改动一次提交、并在提交前留一份本机配置备份：
+
+```powershell
+pwsh -NoProfile -File D:\src\dsh\dsh-commit-backup.ps1 -Status                          # 只盘点
+pwsh -NoProfile -File D:\src\dsh\dsh-commit-backup.ps1 -Message "chore: <本次说明>"      # 备份 + 提交
+pwsh -NoProfile -File D:\src\dsh\dsh-commit-backup.ps1 -Message "chore: <本次说明>" -Push  # 再推送
+```
+
+先子仓库、根仓库最后；只暂存 `git status` 解析出的显式路径（不执行 `git add .`）；凭据文件、`.ptc/`、
+`.tmp-*`、`downloads/` 等本机产物永不入库；从不 force push。用法、参数、排除规则与已知限制见
+[docs/ops/一键提交与备份.md](docs/ops/一键提交与备份.md)。
+
 ## 能力清单（逐组件：用途与 fix 原因）
 
 ### 自写插件

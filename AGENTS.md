@@ -37,6 +37,7 @@
 | provider 与子代理路由的交互式配置 | `ptc-route-setup` |
 | 外部聊天记录转 dsh-chat-import interchange v1 | `dsh-chat-import-convert`（dsh-chat-import 插件内置） |
 | Windows 下 DSH sandbox 意外访问拒绝的 ACL 诊断修复 | `diagnose-windows-sandbox-acl`（宿主自带） |
+| 本机 git 仓库全量拉取/推送、仓库清单保鲜（新增/消失扫描） | `local-git-sync`（自写，实体在 SkillHub store） |
 
 ## 4. 插件登记与变更约束
 
