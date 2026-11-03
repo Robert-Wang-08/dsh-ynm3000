@@ -200,7 +200,9 @@ function Get-RepoState {
 	# core.quotepath=false：非 ASCII 路径按 UTF-8 原样输出。默认设置会把中文转成 \NNN 八进制
 	# 转义（如 docs/ops/\344\270\200...），原样交给 git add 会报
 	# "pathspec ... did not match any files"（2026-11-03 实测踩到）。
-	$porcelain = & git -C $repo -c core.quotepath=false status --porcelain=v1 --untracked-files=all 2>$null
+	# --ignore-submodules=dirty：子模块只有工作区内容变化时（" m"/" ?"）不在这里处理——那要进子模块
+	# 自己提交；指针真的移动了（" M"）仍然会列出来并被暂存。否则会拿一个空改动去 commit 而失败。
+	$porcelain = & git -C $repo -c core.quotepath=false status --porcelain=v1 --untracked-files=all --ignore-submodules=dirty 2>$null
 	foreach ($line in @($porcelain)) {
 		$s = "$line"
 		if ($s.Length -lt 4) { continue }
