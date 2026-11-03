@@ -47,8 +47,8 @@ skillhub-source: not-managed
    - `git --version`；`pwsh --version`（需 PowerShell 7，缺则 `winget install Microsoft.PowerShell`）；
    - `node --version`（建议 nvm-windows + v24.18.0，与源设备一致）；
    - `pnpm --version`（缺则 `npm i -g pnpm`）。
-2. **安装 DSH（钉版本）**：`npm install -g @deepseek-ai/dsh@0.2.0-rc.2`，然后 `dsh --version` 确认。
-   （npm latest 已更高，但本流程只在 0.2.0-rc.2 上验证过，不要擅自换版本。）
+2. **安装 DSH（钉版本）**：`npm install -g @deepseek-ai/dsh@0.2.1-rc.5`，然后 `dsh --version` 确认。
+   （npm `latest`/`next` 当前即此版；另有 `alpha` 频道的 `0.2.2-alpha.*`，本流程不跟 alpha。）
 3. **定位云盘**：找到云盘（如坚果云）同步根下含 `dsh-device\device.env` 的目录，记为 `<云盘根>`
    （源设备安装实例：`D:\nutstore\Skill+Tool\skillhub`，本机盘符可能不同）。
    若云盘未登录或该目录不存在，**停下来问用户**，不要猜路径。

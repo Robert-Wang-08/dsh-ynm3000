@@ -6,7 +6,7 @@
 ## 1. 工作区定位
 
 - 本工作区是 **DSH 插件与配置包开发区**：`dsh-config-pack`（通用配置 Git 包）、`dsh-provider-failover`（keypool/failover 插件）及多个本地插件都从这里以 `link:` 方式登记进 DSH profile。
-- 基线：DSH `0.2.0-rc.2`；`DSH_HOME = %USERPROFILE%\.dsh`；主 profile `web`（另有 `focushub-dev`、`headless`、`web-restore`）。
+- 基线：DSH `0.2.1-rc.5`；`DSH_HOME = %USERPROFILE%\.dsh`；主 profile `web`（另有 `focushub-dev`、`headless`、`web-restore`）。
 - 本目录同时是 DSH 本体源码检出（harness checkout 在 `C:\Users\wwm_1\AppData\Local\nvm\v24.18.0\node_modules\@deepseek-ai\dsh`），不要把两者混淆：改插件/配置在本工作区，改 DSH 本体须走 checkout 并明确说明。
 
 ## 2. 工作区地图与插件登记状态
