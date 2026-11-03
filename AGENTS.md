@@ -54,7 +54,8 @@
 ## 5. 备份与恢复约束（用 `dsh-backup-restore` skill）
 
 - **什么必须备份**：改 profile 配置/插件清单之前；升级 config-pack 或 failover 之前；达到一个"验证通过"的稳定状态之后（留档）。
-- **恢复协议**：先 `restore -DryRun` 给用户看计划 → 实际恢复（脚本自动先做 `pre-restore` 安全备份）→ 重启 DSH 新开会话 → 按第 4 条验收。
+- **一键入口**：`dsh-config-pack/scripts/dsh-backup.ps1`。`backup` 把当前 profile 写成 `%USERPROFILE%\.dsh\backups\dsh-backup-<时间戳>`；`restore` 默认只打印计划，`-Apply` 前自动写 `pre-restore-<时间戳>`。partial 快照写回要加 `-AllowPartial`。
+- **恢复协议**：先 `restore`（默认 DryRun）给用户看计划 → `-Apply` 时脚本自动先做 `pre-restore` 安全备份 → 重启 DSH 新开会话 → 按第 4 条验收。
 - **恢复插件**：配置文件恢复后优先 `pnpm install`（快路径，脚本已为每个 profile 生成 `reinstall-plugins.ps1`）；逐个 `dsh plugin add` 是稳路径，须遵守第 4 条三约束。
 - **备份范围**：仅配置与插件数据（profiles 的配置文件、`plugins/` 运行数据、`.agent-presets`、`device/`）；`sessions/`、`attachments/`、`logs/`、`storages/`、`node_modules/` 不备份（会话归档由 `dsh-archived-sessions` 插件管）。
 

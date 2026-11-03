@@ -85,9 +85,12 @@ pwsh -File dsh-config-pack\scripts\update.ps1 -SkipOptional       # 不动可选
 改了插件/配置之后要把本工作区（根仓库 + 6 个子仓库）的改动一次提交、并在提交前留一份本机配置备份：
 
 ```powershell
-pwsh -NoProfile -File D:\src\dsh\dsh-commit-backup.ps1 -Status                          # 只盘点
-pwsh -NoProfile -File D:\src\dsh\dsh-commit-backup.ps1 -Message "chore: <本次说明>"      # 备份 + 提交
-pwsh -NoProfile -File D:\src\dsh\dsh-commit-backup.ps1 -Message "chore: <本次说明>" -Push  # 再推送
+pwsh -NoProfile -File .\dsh-commit-backup.ps1 -Status                          # 只盘点
+pwsh -NoProfile -File .\dsh-commit-backup.ps1 -Message "chore: <本次说明>"      # 备份 + 提交
+pwsh -NoProfile -File .\dsh-commit-backup.ps1 -Message "chore: <本次说明>" -Push  # 再推送
+pwsh -NoProfile -File .\dsh-config-pack\scripts\dsh-backup.ps1 backup          # 只备份
+pwsh -NoProfile -File .\dsh-config-pack\scripts\dsh-backup.ps1 restore -Snapshot <快照目录>          # 只看恢复计划
+pwsh -NoProfile -File .\dsh-config-pack\scripts\dsh-backup.ps1 restore -Snapshot <快照目录> -Apply -AllowPartial
 ```
 
 先子仓库、根仓库最后；只暂存 `git status` 解析出的显式路径（不执行 `git add .`）；凭据文件、`.ptc/`、

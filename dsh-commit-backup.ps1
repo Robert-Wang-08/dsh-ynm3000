@@ -1,10 +1,10 @@
 #!/usr/bin/env pwsh
 <#
 .SYNOPSIS
-  DSH 一键提交与备份 v1.0.0（盘点 → 备份 → 提交 → 可选推送）
+  DSH 一键提交与备份 v1.1.0（盘点 → 备份 → 提交 → 可选推送）
 
 .DESCRIPTION
-  在 D:\src\dsh 工作区里把「有哪些要提交 / 先备份 / 逐个仓库提交 / 可选推送」四步合成一条命令。
+  在脚本所在工作区里把「有哪些要提交 / 先备份 / 逐个仓库提交 / 可选推送」四步合成一条命令。
 
   设计约束（来自 DSH-插件-补丁与配置一键同步.md 第 8 节）：
     - 不用 git add . / git add -A，只按 git status 解析出的显式路径暂存；
@@ -47,18 +47,19 @@
 
 .PARAMETER BackupScript
   dsh-backup.ps1 的路径。省略时依次读 $env:DSH_BACKUP_SCRIPT、
-  %USERPROFILE%\.agents\skills\dsh-backup-restore\scripts\dsh-backup.ps1。
+  已安装的 dsh-backup-restore skill，再回落到本仓库
+  dsh-config-pack\scripts\dsh-backup.ps1。
 
 .EXAMPLE
-  pwsh -NoProfile -File D:\src\dsh\dsh-commit-backup.ps1 -Status
+  pwsh -NoProfile -File .\dsh-commit-backup.ps1 -Status
   只看盘点，不动任何东西。
 
 .EXAMPLE
-  pwsh -NoProfile -File D:\src\dsh\dsh-commit-backup.ps1 -Message "chore: 修 PTC 路由档位"
+  pwsh -NoProfile -File .\dsh-commit-backup.ps1 -Message "chore: 修 PTC 路由档位"
   备份 + 在全部有改动的仓库里提交（不推送）。
 
 .EXAMPLE
-  pwsh -NoProfile -File D:\src\dsh\dsh-commit-backup.ps1 -Message "chore: 收口" -Push
+  pwsh -NoProfile -File .\dsh-commit-backup.ps1 -Message "chore: 收口" -Push
   备份 + 提交 + 推送。
 
 .NOTES
@@ -79,13 +80,14 @@ param(
 	[string[]]$Only = @(),
 	[string]$BackupDest = '',
 	[string]$BackupScript = '',
-	[string]$RootDir = 'D:\src\dsh'
+	[string]$RootDir = ''
 )
 
 $ErrorActionPreference = 'Stop'
 $PSNativeCommandUseErrorActionPreference = $false
 
-$ScriptVersion = '1.0.0'
+$ScriptVersion = '1.1.0'
+if ([string]::IsNullOrWhiteSpace($RootDir)) { $RootDir = $PSScriptRoot }
 $Root = $RootDir
 $Stamp = (Get-Date).ToUniversalTime().ToString('yyyyMMddTHHmmssZ')
 $PlanOnly = ($DryRun -or $Status)
@@ -257,8 +259,9 @@ function Get-RepoState {
 function Resolve-BackupScript {
 	if (-not [string]::IsNullOrWhiteSpace($BackupScript)) { return $BackupScript }
 	if (-not [string]::IsNullOrWhiteSpace($env:DSH_BACKUP_SCRIPT)) { return $env:DSH_BACKUP_SCRIPT }
-	$candidate = Join-Path $env:USERPROFILE '.agents\skills\dsh-backup-restore\scripts\dsh-backup.ps1'
-	return $candidate
+	$skill = Join-Path $env:USERPROFILE '.agents\skills\dsh-backup-restore\scripts\dsh-backup.ps1'
+	if (Test-Path -LiteralPath $skill) { return $skill }
+	return (Join-Path $PSScriptRoot 'dsh-config-pack\scripts\dsh-backup.ps1')
 }
 
 function Invoke-DshBackup {
