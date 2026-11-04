@@ -95,3 +95,20 @@
 - 拿不准能否自动时，**按“需要安装性变更”处理**（补脚本或文档），不要赌对方环境。
 - 实例（2026-10-21）：`dsh-plugin-new-session` 采用 `dsh plugin add` + README + 装机引导，
   放弃补丁层 `file:` 直挂——后者配置在 `~/.dsh` 且硬编码仓库路径，换设备要手改，不满足第 1 条。
+
+## 9. Git 操作纪律：工作仓库隔离（铁律）
+
+<!-- BEGIN LOCAL:git-work-repo-isolation-pointer -->
+<!-- origin: user-request; author: wang; created: 2026-11-04; 说明：本地指针；正文唯一来源是 SkillHub 片段 git-work-repo-isolation -->
+
+**正文唯一来源**：SkillHub agents 片段 `git-work-repo-isolation`
+
+- 片段路径：`<SkillHub 根>/store/agent_instructions/fragments/git-work-repo-isolation.md`
+- 本机 SkillHub 根：`D:\src\ynm3000\skillhub`；其他设备按 `SKILLHUB_ROOT` 或该设备 skillhub 根解析，不要硬编码本机路径。
+
+执行任何 git 同步 / 恢复之前，先读该片段全文；本文件只保留指针与下面两条即时常量，不复制正文（避免多处副本漂移）。
+
+- 没有明确语义指示，**不拉取、不推送 `work` 组仓库**；定向刷新只用 `-Group personal` / `-Group thirdparty`，或对 `D:\src\dsh` 逐仓 `git fetch` + `git merge --ff-only`。
+- 引擎一致性门槛：`engine-preflight.ps1` 报 `drift` → 停下等人工决策（`bootstrap.ps1 -AcceptDrift` 先备份）；`conflict` → 无法支持，不覆盖、不同步、**不得一键恢复**。
+<!-- END LOCAL:git-work-repo-isolation-pointer -->
+
