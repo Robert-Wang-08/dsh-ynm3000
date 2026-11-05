@@ -86,7 +86,7 @@ param(
 $ErrorActionPreference = 'Stop'
 $PSNativeCommandUseErrorActionPreference = $false
 
-$ScriptVersion = '1.1.0'
+$ScriptVersion = '1.1.1'
 if ([string]::IsNullOrWhiteSpace($RootDir)) { $RootDir = $PSScriptRoot }
 $Root = $RootDir
 $Stamp = (Get-Date).ToUniversalTime().ToString('yyyyMMddTHHmmssZ')
@@ -259,9 +259,14 @@ function Get-RepoState {
 function Resolve-BackupScript {
 	if (-not [string]::IsNullOrWhiteSpace($BackupScript)) { return $BackupScript }
 	if (-not [string]::IsNullOrWhiteSpace($env:DSH_BACKUP_SCRIPT)) { return $env:DSH_BACKUP_SCRIPT }
+	# 配置包入口排第一：它用自己目录下的 snapshot.mjs，本机没把 dsh-config-pack 装进 profile 时也能备份。
+	# skill 入口按 profile 的 node_modules 定位 snapshot.mjs；本机 config-pack 走仓库而非 profile 依赖，
+	# 那条路径会直接抛 "找不到 snapshot.mjs"（2026-11-05 真实运行踩到：提交前备份静默失败，只打一行 [err]）。
+	$pack = Join-Path $PSScriptRoot 'dsh-config-pack\scripts\dsh-backup.ps1'
+	if (Test-Path -LiteralPath $pack) { return $pack }
 	$skill = Join-Path $env:USERPROFILE '.agents\skills\dsh-backup-restore\scripts\dsh-backup.ps1'
 	if (Test-Path -LiteralPath $skill) { return $skill }
-	return (Join-Path $PSScriptRoot 'dsh-config-pack\scripts\dsh-backup.ps1')
+	return $pack
 }
 
 function Invoke-DshBackup {
