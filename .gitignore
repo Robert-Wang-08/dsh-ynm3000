@@ -7,8 +7,9 @@ node_modules/
 # 模型评测产物（zip + 生成物），不属于插件/配置仓
 model-benchmark/
 
-# focus-hub 是独立 git 仓库但目前没有远程；在它有 remote 并注册为 submodule 之前，
-# 直接提交会变成 .gitmodules 里没有条目的 gitlink，克隆方只能拿到空目录。
+# focus-hub 是独立应用仓库。2026-11-05 复核：已有 origin（github.com/Robert-Wang-08/focus-hub.git），
+# 本地 main 领先 76 个提交、尚未注册为 submodule。未注册前直接提交只会变成 .gitmodules 里没有条目的
+# gitlink，克隆方拿到空目录。需要把它纳入「一键提交」时用 dsh-commit-backup.ps1 -IncludeFocusHub。
 focus-hub/
 
 # ACL/route 观察工具的运行产物（json 备份与报告），不入库
