@@ -26,7 +26,17 @@
 4. **准入名单为空**：所有消息被判 `not_a_member` 静默丢弃。
    - 修：`policy.sources.feishu.allowed = [{ id: <操作者 open_id>, name: "Robert" }]`。
 
-以上 1/3 是对 `node_modules/dsh-superagent` 的本地补丁，**升级会覆盖**；备份为同目录 `.bak-20261106T*`。
+以上 1/3 是对 `node_modules/dsh-superagent` 的改写，**升级 dsh-superagent 会整目录替换、补丁丢失**。
+
+补丁本体已收进仓库（唯一事实源，不放 node_modules）：
+
+```powershell
+pwsh -File docs\ops\patch-dsh-superagent.ps1                 # 校验（只读）
+pwsh -File docs\ops\patch-dsh-superagent.ps1 -Mode apply     # 打上缺失的补丁（幂等）
+pwsh -File docs\ops\patch-dsh-superagent.ps1 -Mode restore   # 回滚
+```
+
+详见 `docs/ops/dsh-superagent-patches/README.md`；打完要重启 3082。
 
 ## 3. 怎么验（关键教训：回信在**话题回复**里，不在私聊顶层）
 
