@@ -3,8 +3,8 @@ origin: self
 owner: wang
 author: wang
 created: 2026-10-20
-updated: 2026-10-29
-version: 0.3.0
+updated: 2026-11-06
+version: 0.3.1
 asset-type: prompt
 source: dsh-ynm3000
 skillhub-source: not-managed
@@ -120,6 +120,27 @@ skillhub-source: not-managed
      - 验收：`node <仓库根>\dsh-wechat-hitl\tools\switch-hitl.mjs --show` 的 `patchMounted` 各 profile 均 `present: true`（重复跑 `--state running` 应为 `action: unchanged`）；`dsh --profile <profile> --dump-config` 含 `- id: wechat-hitl` 且无 `patch: entry ... not found` / `did not activate`。
      - 回滚：`node <仓库根>\dsh-wechat-hitl\tools\switch-hitl.mjs --state stopped`（摘挂载 + 留备份），或直接删掉 profile `node_modules` 下该目录。
      - **已知设备字面量（换设备必须改）**：`lib/hitl-store.js` 的 `PROD_STATE_DIR`（捕获包副本回落用的规范绝对路径，源设备 `D:\src\dsh\dsh-wechat-hitl\state`）、`PATHS.workdir`（源设备 `D:\nutstore\1.logseq`）、`workspaceKey`、`PATHS.node`（源设备 `C:\openclaw-runtime\node.exe`）。日常可先用 `DSH_WECHAT_HITL_STATE` 整体覆盖状态目录，不必改代码。改完跑 `node <仓库根>\dsh-wechat-hitl\test\switch.test.mjs`（期望 15 pass / 0 fail）。
+5b. **多 profile 全量还原（可选）**：`setup.ps1` 只建/装**一个** profile（默认 `packed`）。
+    若要把源设备的**整套** profile（`web`、`superagent`、`plugtest`、`sa-local`、`web-restore`、
+    `acp`、`headless`、`focushub-dev`、`packed`）一起搬过来，用配置包的多 profile bundle（v0.11.7 起）：
+
+    ```powershell
+    # 源设备：全部 profile 打成一个 bundle → <源设备 ~/.dsh/backups/dsh-backup-<时间戳>>
+    pwsh -File <源设备仓库根>\dsh-config-pack\scripts\dsh-backup.ps1 backup -AllProfiles
+
+    # 目标设备：先出计划（不写），确认后再写回（逐 profile 先写 pre-restore-<时间戳>）
+    pwsh -File <仓库根>\dsh-config-pack\scripts\dsh-backup.ps1 restore -AllProfiles `
+         -Snapshot "<拷过来的 dsh-backup-<时间戳> 目录>"
+    pwsh -File <仓库根>\dsh-config-pack\scripts\dsh-backup.ps1 restore -AllProfiles `
+         -Snapshot "<同上>" -Apply -AllowPartial
+    ```
+
+    - **默认 profile 不变**：`bundle.json` 只记录 `default_profile`（源设备是 `web`），恢复后照旧
+      `dsh web` 启动；不会把默认切到 `packed` 或别的 profile。
+    - 每个 profile 仍是标准 `dsh-snapshot/v1`，可单独重放：`restore -Snapshot <bundle>\profiles\<profile>`。
+    - `link:` 依赖仍指向源设备检出路径——目标设备仓库克隆路径必须一致，否则按第 5 步重新
+      `dsh plugin add`（已知跨设备差异，不是快照缺陷）。
+    - **写回前先停目标设备上正在跑的 `dsh web`**，避免热重载层栈打断正在进行的会话回合。
 6. **安装后偏差比较验收**（install.ps1 第 4.6 步已自动跑过一次；手动复核用同一条命令）：
    ```powershell
    node <仓库根>\dsh-config-pack\scripts\verify-install.mjs --profile packed
