@@ -1,10 +1,15 @@
 #!/usr/bin/env pwsh
 <#
 .SYNOPSIS
-  DSH 一键提交与备份 v1.1.0（盘点 → 备份 → 提交 → 可选推送）
+  DSH 收口备份 v1.3.0（盘点 → 备份 → 提交 → 可选推送 → 快照校验）
 
 .DESCRIPTION
   在脚本所在工作区里把「有哪些要提交 / 先备份 / 逐个仓库提交 / 可选推送」四步合成一条命令。
+  常驻工作名为「DSH 收口备份」：一句话触发，产出可在另一台机器一键恢复的全 profile bundle。
+
+  备份默认走配置包的 `backup -AllProfiles`（每个 profile 一份 snapshot/v1 + 根目录 bundle.json），
+  这是跨机恢复的前提；只需当前 profile 时加 -SingleProfile 回到旧行为（单 web 快照，不能跨机整机恢复）。
+  备份完成后会读 bundle.json 复核，只有 failed=0 且 bundle.json 可读才记为 ok。
 
   设计约束（来自 DSH-插件-补丁与配置一键同步.md 第 8 节）：
     - 不用 git add . / git add -A，只按 git status 解析出的显式路径暂存；
@@ -29,6 +34,10 @@
 
 .PARAMETER NoBackup
   跳过 DSH 配置备份（默认会在提交前备份一次）。
+
+.PARAMETER SingleProfile
+  只备份当前 profile（旧行为，单 profile 快照）。默认备份全部 profile，
+  产出可直接在另一台机器 `dsh-restore.ps1` 一键恢复的 bundle。
 
 .PARAMETER IncludeUntracked
   把未被 .gitignore 忽略的未跟踪文件一并提交（仍会过滤凭据与临时产物）。
@@ -60,10 +69,12 @@
 
 .EXAMPLE
   pwsh -NoProfile -File .\dsh-commit-backup.ps1 -Message "chore: 收口" -Push
-  备份 + 提交 + 推送。
+  备份 + 提交 + 推送。这就是常驻工作「DSH 收口备份」的一键入口：
+  全 profile 快照可在另一台机器用 dsh-restore.ps1 一键恢复。
 
 .NOTES
-  版本历史见 docs/ops/一键提交与备份.md。
+  版本历史见 docs/ops/一键提交与备份.md；跨机恢复步骤见同一文档第 3 节与
+  docs/bootstrap/PROMPT-新设备装机-引导.md。
   在 DSH 会话内执行时，若文件策略为只读或沙箱拦写 .git，会在此脚本第一次写操作处报
   Permission denied —— 这不是脚本缺陷，请改在本机终端（沙箱外）运行。
 #>
@@ -74,6 +85,7 @@ param(
 	[switch]$Status,
 	[switch]$Push,
 	[switch]$NoBackup,
+	[switch]$SingleProfile,
 	[switch]$IncludeUntracked,
 	[switch]$IncludeFocusHub,
 	[switch]$RepairDetached,
@@ -86,7 +98,7 @@ param(
 $ErrorActionPreference = 'Stop'
 $PSNativeCommandUseErrorActionPreference = $false
 
-$ScriptVersion = '1.1.1'
+$ScriptVersion = '1.3.0'
 if ([string]::IsNullOrWhiteSpace($RootDir)) { $RootDir = $PSScriptRoot }
 $Root = $RootDir
 $Stamp = (Get-Date).ToUniversalTime().ToString('yyyyMMddTHHmmssZ')
@@ -269,31 +281,81 @@ function Resolve-BackupScript {
 	return $pack
 }
 
+function Get-BundleInfo {
+	param([string]$Bundle)
+	$info = [pscustomobject]@{ Exists = $false; Profiles = 0; DefaultProfile = ''; Invalid = @() }
+	if ([string]::IsNullOrWhiteSpace($Bundle)) { return $info }
+	$bundleJson = Join-Path $Bundle 'bundle.json'
+	if (-not (Test-Path -LiteralPath $bundleJson)) { return $info }
+	try { $b = Get-Content -LiteralPath $bundleJson -Raw -Encoding utf8 | ConvertFrom-Json } catch { return $info }
+	$info.Exists = $true
+	$info.Profiles = @($b.profiles).Count
+	$info.DefaultProfile = [string]$b.default_profile
+	$info.Invalid = @($b.profiles | Where-Object { [string]$_.status -ne 'ok' } | ForEach-Object { "$($_.profile)=$($_.status)" })
+	return $info
+}
+
 function Invoke-DshBackup {
-	if ($NoBackup) { return [pscustomobject]@{ Status = 'skipped'; Detail = '-NoBackup' } }
-	if ($PlanOnly) { return [pscustomobject]@{ Status = 'planned'; Detail = '计划中（DryRun 不落盘）' } }
+	if ($NoBackup) { return [pscustomobject]@{ Status = 'skipped'; Detail = '-NoBackup'; Bundle = ''; Profiles = 0; DefaultProfile = ''; Failed = 0; Output = '' } }
+	if ($PlanOnly) { return [pscustomobject]@{ Status = 'planned'; Detail = '计划中（默认全 profile bundle，DryRun 不落盘）'; Bundle = ''; Profiles = 0; DefaultProfile = ''; Failed = 0; Output = '' } }
 	$path = Resolve-BackupScript
 	if (-not (Test-Path -LiteralPath $path)) {
-		return [pscustomobject]@{ Status = 'missing'; Detail = "找不到 dsh-backup.ps1：$path" }
+		return [pscustomobject]@{ Status = 'missing'; Detail = "找不到 dsh-backup.ps1：$path"; Bundle = ''; Profiles = 0; DefaultProfile = ''; Failed = 0; Output = '' }
 	}
 	$callArgs = @('backup')
+	# 默认全 profile：bundle 是跨机一键恢复的前提；-SingleProfile 才回到单 profile 快照。
+	if (-not $SingleProfile) { $callArgs += '-AllProfiles' }
 	if (-not [string]::IsNullOrWhiteSpace($BackupDest)) { $callArgs += @('-Dest', $BackupDest) }
 	$out = & pwsh -NoProfile -File $path @callArgs 2>&1
 	$code = $LASTEXITCODE
 	$text = ((@($out) | ForEach-Object { "$_" }) -join [Environment]::NewLine).Trim()
-	if ($code -eq 0) {
-		$hit = [regex]::Match($text, 'dsh-backup-\d{8}-\d{6}')
-		$name = $(if ($hit.Success) { $hit.Value } else { '（未从输出中识别备份目录名）' })
-		return [pscustomobject]@{ Status = 'ok'; Detail = $name; Output = $text }
+	if ($code -ne 0) {
+		return [pscustomobject]@{ Status = 'failed'; Detail = "exit $code"; Bundle = ''; Profiles = 0; DefaultProfile = ''; Failed = 0; Output = $text }
 	}
-	return [pscustomobject]@{ Status = 'failed'; Detail = "exit $code"; Output = $text }
+
+	$nameHit = [regex]::Match($text, 'dsh-backup-\d{8}-\d{6}(?:-\d{3})?')
+	$name = $(if ($nameHit.Success) { $nameHit.Value } else { '' })
+	$failedHit = [regex]::Match($text, 'failed=(\d+)')
+	$failedCount = $(if ($failedHit.Success) { [int]$failedHit.Groups[1].Value } else { 0 })
+	# 配置包在 -AllProfiles 末尾会打印 bundle=<绝对目录>；没有这行时按默认备份根拼回。
+	$bundleHit = [regex]::Match($text, '(?m)^bundle=(.+)$')
+	$bundle = ''
+	if ($bundleHit.Success) {
+		$bundle = $bundleHit.Groups[1].Value.Trim()
+	} elseif ($name) {
+		$root = $(if (-not [string]::IsNullOrWhiteSpace($BackupDest)) { $BackupDest } elseif ($env:DSH_HOME) { Join-Path $env:DSH_HOME 'backups' } else { Join-Path $env:USERPROFILE '.dsh\backups' })
+		$bundle = Join-Path $root $name
+	}
+
+	$info = Get-BundleInfo $bundle
+	$base = [ordered]@{ Bundle = $bundle; Profiles = $info.Profiles; DefaultProfile = $info.DefaultProfile; Failed = $failedCount; Output = $text }
+
+	if ($info.Exists) {
+		if ($info.Invalid.Count -gt 0 -or $failedCount -gt 0) {
+			$detail = "$name（$($info.Profiles) profile，异常：$($info.Invalid -join ', ')；failed=$failedCount）"
+			$base.Status = 'partial'; $base.Detail = $detail
+			return [pscustomobject]$base
+		}
+		$base.Status = 'ok'
+		$base.Detail = "$name（$($info.Profiles) profile，默认 $($info.DefaultProfile)，bundle.json 校验通过）"
+		return [pscustomobject]$base
+	}
+
+	if ($SingleProfile) {
+		$base.Status = 'ok'
+		$base.Detail = "$name（单 profile 快照，未生成 bundle.json：不能跨机整机恢复）"
+		return [pscustomobject]$base
+	}
+	$base.Status = 'unverified'
+	$base.Detail = "$name（全 profile 备份已执行，但 bundle.json 缺失或不可解析：$bundle）"
+	return [pscustomobject]$base
 }
 
 # ── 主流程 ──────────────────────────────────────────────────────────────────
 Write-Host ''
 Write-Host "DSH 一键提交与备份 v$ScriptVersion" -ForegroundColor Cyan
 Write-Info "工作区：$Root"
-Write-Info "模式：$(if ($PlanOnly) { '只盘点（DryRun）' } else { '实际执行' })  推送：$(if ($Push) { '是' } else { '否' })  备份：$(if ($NoBackup) { '跳过' } else { '提交前执行一次' })"
+Write-Info "模式：$(if ($PlanOnly) { '只盘点（DryRun）' } else { '实际执行' })  推送：$(if ($Push) { '是' } else { '否' })  备份：$(if ($NoBackup) { '跳过' } elseif ($SingleProfile) { '提交前执行一次（单 profile）' } else { '提交前执行一次（全 profile bundle）' })"
 
 $targets = Get-RepoTargets
 $states = New-Object System.Collections.Generic.List[object]
@@ -431,13 +493,26 @@ if ($PlanOnly) {
 Write-Head '备份'
 $backupResult = Invoke-DshBackup
 switch ($backupResult.Status) {
-	'ok'      { Write-Ok "配置备份完成：$($backupResult.Detail)" }
-	'skipped' { Write-Warn2 "已跳过备份：$($backupResult.Detail)" }
-	'planned' { Write-Info '计划中' }
-	'missing' { Write-Warn2 $backupResult.Detail }
-	'failed'  { Write-Err "配置备份失败：$($backupResult.Detail)"; Write-Host $backupResult.Output }
+	'ok'         { Write-Ok "配置备份完成：$($backupResult.Detail)" }
+	'partial'    { Write-Warn2 "配置备份不完整：$($backupResult.Detail)" }
+	'unverified' { Write-Warn2 "配置备份已执行但未通过 bundle 校验：$($backupResult.Detail)" }
+	'skipped'    { Write-Warn2 "已跳过备份：$($backupResult.Detail)" }
+	'planned'    { Write-Info "计划中：$($backupResult.Detail)" }
+	'missing'    { Write-Warn2 $backupResult.Detail }
+	'failed'     { Write-Err "配置备份失败：$($backupResult.Detail)"; Write-Host $backupResult.Output }
 }
-$receipt.backup = [ordered]@{ status = $backupResult.Status; detail = $backupResult.Detail }
+if ($backupResult.Status -eq 'ok' -and -not [string]::IsNullOrWhiteSpace($backupResult.Bundle)) {
+	Write-Info "bundle：$($backupResult.Bundle)"
+	Write-Info "跨机恢复：把该目录拷到目标机后运行 dsh-restore.ps1 -Snapshot <bundle> -Apply -AllowPartial"
+}
+$receipt.backup = [ordered]@{
+	status          = $backupResult.Status
+	detail          = $backupResult.Detail
+	bundle          = $backupResult.Bundle
+	profiles        = $backupResult.Profiles
+	default_profile = $backupResult.DefaultProfile
+	failed          = $backupResult.Failed
+}
 
 $failures = 0
 $committed = New-Object System.Collections.Generic.List[object]
