@@ -73,7 +73,7 @@
   全 profile 快照可在另一台机器用 dsh-restore.ps1 一键恢复。
 
 .NOTES
-  版本历史见 docs/ops/一键提交与备份.md；跨机恢复步骤见同一文档第 3 节与
+  版本历史见 docs/ops/一键提交与备份.md；跨机恢复步骤见同一文档第 5 节与
   docs/bootstrap/PROMPT-新设备装机-引导.md。
   在 DSH 会话内执行时，若文件策略为只读或沙箱拦写 .git，会在此脚本第一次写操作处报
   Permission denied —— 这不是脚本缺陷，请改在本机终端（沙箱外）运行。
@@ -353,7 +353,7 @@ function Invoke-DshBackup {
 
 # ── 主流程 ──────────────────────────────────────────────────────────────────
 Write-Host ''
-Write-Host "DSH 一键提交与备份 v$ScriptVersion" -ForegroundColor Cyan
+Write-Host "DSH 收口备份 v$ScriptVersion" -ForegroundColor Cyan
 Write-Info "工作区：$Root"
 Write-Info "模式：$(if ($PlanOnly) { '只盘点（DryRun）' } else { '实际执行' })  推送：$(if ($Push) { '是' } else { '否' })  备份：$(if ($NoBackup) { '跳过' } elseif ($SingleProfile) { '提交前执行一次（单 profile）' } else { '提交前执行一次（全 profile bundle）' })"
 
@@ -480,7 +480,7 @@ function Write-ReceiptFile {
 if ($PlanOnly) {
 	Write-Head '计划（未执行任何写操作）'
 	foreach ($s in $toCommit) { Write-Info "$($s.Name) : 将暂存并提交 $($s.Stage.Count) 个文件" }
-	if (-not $NoBackup) { Write-Info '将在提交前执行一次 DSH 配置备份' }
+	if (-not $NoBackup) { Write-Info $(if ($SingleProfile) { '将在提交前执行一次 DSH 配置备份（单 profile）' } else { '将在提交前执行一次 DSH 配置备份（全 profile bundle，可跨机恢复）' }) }
 	if ($Push) { Write-Info '提交后对每个有上游的仓库执行 push（不 force）' }
 	$receiptPath = Write-ReceiptFile
 	Write-Host ''
