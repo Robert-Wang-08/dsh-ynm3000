@@ -88,6 +88,7 @@ pwsh -File dsh-config-pack\scripts\update.ps1 -SkipOptional       # 不动可选
 pwsh -NoProfile -File .\dsh-commit-backup.ps1 -Status                          # 只盘点
 pwsh -NoProfile -File .\dsh-commit-backup.ps1 -Message "chore: <本次说明>"      # 备份 + 提交
 pwsh -NoProfile -File .\dsh-commit-backup.ps1 -Message "chore: <本次说明>" -Push  # 再推送
+pwsh -NoProfile -File .\dsh-commit-backup.ps1 -Rehearse -Message "chore: 收口" -Push  # 带隔离安装演练的全 profile bundle
 pwsh -NoProfile -File .\dsh-config-pack\scripts\dsh-backup.ps1 backup          # 只备份
 pwsh -NoProfile -File .\dsh-config-pack\scripts\dsh-backup.ps1 restore -Snapshot <快照目录>          # 只看恢复计划
 pwsh -NoProfile -File .\dsh-config-pack\scripts\dsh-backup.ps1 restore -Snapshot <快照目录> -Apply -AllowPartial
