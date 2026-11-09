@@ -141,6 +141,12 @@ skillhub-source: not-managed
     - `link:` 依赖仍指向源设备检出路径——目标设备仓库克隆路径必须一致，否则按第 5 步重新
       `dsh plugin add`（已知跨设备差异，不是快照缺陷）。
     - **写回前先停目标设备上正在跑的 `dsh web`**，避免热重载层栈打断正在进行的会话回合。
+    - 仓库根目录的 `dsh-restore.ps1` 是上面两步的封装（自动取最新 bundle、写回前体检 `link:` 路径、
+      写回后打印验收步骤），换机时推荐直接用它：
+      ```powershell
+      pwsh -File <仓库根>\dsh-restore.ps1 -Snapshot "<拷过来的 dsh-backup-<时间戳> 目录>"
+      pwsh -File <仓库根>\dsh-restore.ps1 -Snapshot "<同上>" -Apply -AllowPartial
+      ```
 6. **安装后偏差比较验收**（install.ps1 第 4.6 步已自动跑过一次；手动复核用同一条命令）：
    ```powershell
    node <仓库根>\dsh-config-pack\scripts\verify-install.mjs --profile packed
