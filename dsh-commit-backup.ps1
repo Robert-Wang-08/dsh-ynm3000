@@ -43,6 +43,10 @@
   备份时请求隔离安装演练（透传给 dsh-backup 的 -Rehearse）。演练通过后
   staging_rehearsal 门禁为 pass；默认离线 pnpm install，不访问网络。
 
+.PARAMETER RehearseOnline
+  在线隔离安装演练（透传给 dsh-backup 的 -RehearseOnline）。
+  用于 store 缺 git-hosted tarball、离线演练必然失败的 profile。
+
 .PARAMETER IncludeUntracked
   把未被 .gitignore 忽略的未跟踪文件一并提交（仍会过滤凭据与临时产物）。
 
@@ -95,6 +99,7 @@ param(
 	[switch]$NoBackup,
 	[switch]$SingleProfile,
 	[switch]$Rehearse,
+	[switch]$RehearseOnline,
 	[switch]$IncludeUntracked,
 	[switch]$IncludeFocusHub,
 	[switch]$RepairDetached,
@@ -315,7 +320,8 @@ function Invoke-DshBackup {
 	$callArgs = @('backup')
 	# 默认全 profile：bundle 是跨机一键恢复的前提；-SingleProfile 才回到单 profile 快照。
 	if (-not $SingleProfile) { $callArgs += '-AllProfiles' }
-	if ($Rehearse) { $callArgs += '-Rehearse' }
+	if ($RehearseOnline) { $callArgs += '-RehearseOnline' }
+	elseif ($Rehearse) { $callArgs += '-Rehearse' }
 	if (-not [string]::IsNullOrWhiteSpace($BackupDest)) { $callArgs += @('-Dest', $BackupDest) }
 	if ($AllowPrivateToDest) { $callArgs += '-AllowPrivateToDest' }
 	$out = & pwsh -NoProfile -File $path @callArgs 2>&1
