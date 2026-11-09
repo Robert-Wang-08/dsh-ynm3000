@@ -164,6 +164,13 @@ Write-Info "profile：$($okEntries.Count) 个 ok$(if ($badEntries.Count -gt 0) {
 if ($badEntries.Count -gt 0) { Write-Warn2 "异常 profile 不会被恢复：$(($badEntries | ForEach-Object { "$($_.profile)=$($_.status)" }) -join ', ')" }
 if ($partialIds.Count -gt 0) { Write-Warn2 "partial（未做隔离安装演练）：$($partialIds.Count) 个 —— 写回需 -AllowPartial" }
 
+if ($okEntries.Count -eq 0) {
+	Write-Host ''
+	Write-Err "bundle 里没有任何 ok 的 profile，无法恢复：$Snapshot"
+	Write-Info '先在源设备重跑备份；异常 profile 的 status 见 bundle.json 的 profiles[].status。'
+	exit 2
+}
+
 # ── 跨机路径体检：link: 依赖指向的目录是否存在 ─────────────────────────────
 Write-Head '跨机路径体检（link: 依赖）'
 $missingLinks = New-Object System.Collections.Generic.List[object]
@@ -186,7 +193,7 @@ if ($missingLinks.Count -eq 0) {
 } else {
 	Write-Warn2 "$($missingLinks.Count) 个 link: 依赖路径在本机不存在（目标机仓库克隆路径与源设备不同）："
 	$missingLinks | Select-Object -First 12 | Format-Table -AutoSize | Out-String -Width 200 | Write-Host
-	if ($missingLinks.Count -gt 12) { Write-Info "… 另有 $($missingLinks.Count - 12) 个（完整清单见上方摘要规则：按 profile 去重）" }
+	if ($missingLinks.Count -gt 12) { Write-Info "… 另有 $($missingLinks.Count - 12) 个未显示（可按 bundle 内 profiles/<profile>/package.json 逐项核对）" }
 	Write-Info '处置：把本机仓库克隆到与源设备相同的路径，或恢复后按 docs/bootstrap/PROMPT-新设备装机-引导.md 第 5 步重新 dsh plugin add。'
 }
 

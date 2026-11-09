@@ -53,6 +53,10 @@
 
 .PARAMETER BackupDest
   备份根目录，透传给 dsh-backup 的 -Dest。省略则用默认 %USERPROFILE%\.dsh\backups。
+  目录在用户目录之外（共享盘/移动盘）时需同时加 -AllowPrivateToDest。
+
+.PARAMETER AllowPrivateToDest
+  允许把 bundle 备份到用户目录之外（透传给 dsh-backup 的 -AllowPrivateToDest）。
 
 .PARAMETER BackupScript
   dsh-backup.ps1 的路径。省略时依次读 $env:DSH_BACKUP_SCRIPT、
@@ -91,6 +95,7 @@ param(
 	[switch]$RepairDetached,
 	[string[]]$Only = @(),
 	[string]$BackupDest = '',
+	[switch]$AllowPrivateToDest,
 	[string]$BackupScript = '',
 	[string]$RootDir = ''
 )
@@ -296,21 +301,22 @@ function Get-BundleInfo {
 }
 
 function Invoke-DshBackup {
-	if ($NoBackup) { return [pscustomobject]@{ Status = 'skipped'; Detail = '-NoBackup'; Bundle = ''; Profiles = 0; DefaultProfile = ''; Failed = 0; Output = '' } }
-	if ($PlanOnly) { return [pscustomobject]@{ Status = 'planned'; Detail = '计划中（默认全 profile bundle，DryRun 不落盘）'; Bundle = ''; Profiles = 0; DefaultProfile = ''; Failed = 0; Output = '' } }
+	if ($NoBackup) { return [pscustomobject]@{ Status = 'skipped'; Detail = '-NoBackup'; Bundle = ''; HasBundle = $false; Profiles = 0; DefaultProfile = ''; Failed = 0; Output = '' } }
+	if ($PlanOnly) { return [pscustomobject]@{ Status = 'planned'; Detail = '计划中（默认全 profile bundle，DryRun 不落盘）'; Bundle = ''; HasBundle = $false; Profiles = 0; DefaultProfile = ''; Failed = 0; Output = '' } }
 	$path = Resolve-BackupScript
 	if (-not (Test-Path -LiteralPath $path)) {
-		return [pscustomobject]@{ Status = 'missing'; Detail = "找不到 dsh-backup.ps1：$path"; Bundle = ''; Profiles = 0; DefaultProfile = ''; Failed = 0; Output = '' }
+		return [pscustomobject]@{ Status = 'missing'; Detail = "找不到 dsh-backup.ps1：$path"; Bundle = ''; HasBundle = $false; Profiles = 0; DefaultProfile = ''; Failed = 0; Output = '' }
 	}
 	$callArgs = @('backup')
 	# 默认全 profile：bundle 是跨机一键恢复的前提；-SingleProfile 才回到单 profile 快照。
 	if (-not $SingleProfile) { $callArgs += '-AllProfiles' }
 	if (-not [string]::IsNullOrWhiteSpace($BackupDest)) { $callArgs += @('-Dest', $BackupDest) }
+	if ($AllowPrivateToDest) { $callArgs += '-AllowPrivateToDest' }
 	$out = & pwsh -NoProfile -File $path @callArgs 2>&1
 	$code = $LASTEXITCODE
 	$text = ((@($out) | ForEach-Object { "$_" }) -join [Environment]::NewLine).Trim()
 	if ($code -ne 0) {
-		return [pscustomobject]@{ Status = 'failed'; Detail = "exit $code"; Bundle = ''; Profiles = 0; DefaultProfile = ''; Failed = 0; Output = $text }
+		return [pscustomobject]@{ Status = 'failed'; Detail = "exit $code"; Bundle = ''; HasBundle = $false; Profiles = 0; DefaultProfile = ''; Failed = 0; Output = $text }
 	}
 
 	$nameHit = [regex]::Match($text, 'dsh-backup-\d{8}-\d{6}(?:-\d{3})?')
@@ -328,7 +334,7 @@ function Invoke-DshBackup {
 	}
 
 	$info = Get-BundleInfo $bundle
-	$base = [ordered]@{ Bundle = $bundle; Profiles = $info.Profiles; DefaultProfile = $info.DefaultProfile; Failed = $failedCount; Output = $text }
+	$base = [ordered]@{ Bundle = $bundle; HasBundle = $info.Exists; Profiles = $info.Profiles; DefaultProfile = $info.DefaultProfile; Failed = $failedCount; Output = $text }
 
 	if ($info.Exists) {
 		if ($info.Invalid.Count -gt 0 -or $failedCount -gt 0) {
@@ -501,7 +507,7 @@ switch ($backupResult.Status) {
 	'missing'    { Write-Warn2 $backupResult.Detail }
 	'failed'     { Write-Err "配置备份失败：$($backupResult.Detail)"; Write-Host $backupResult.Output }
 }
-if ($backupResult.Status -eq 'ok' -and -not [string]::IsNullOrWhiteSpace($backupResult.Bundle)) {
+if ($backupResult.Status -eq 'ok' -and $backupResult.HasBundle -and -not [string]::IsNullOrWhiteSpace($backupResult.Bundle)) {
 	Write-Info "bundle：$($backupResult.Bundle)"
 	Write-Info "跨机恢复：把该目录拷到目标机后运行 dsh-restore.ps1 -Snapshot <bundle> -Apply -AllowPartial"
 }
@@ -509,6 +515,7 @@ $receipt.backup = [ordered]@{
 	status          = $backupResult.Status
 	detail          = $backupResult.Detail
 	bundle          = $backupResult.Bundle
+	bundle_verified = [bool]$backupResult.HasBundle
 	profiles        = $backupResult.Profiles
 	default_profile = $backupResult.DefaultProfile
 	failed          = $backupResult.Failed
