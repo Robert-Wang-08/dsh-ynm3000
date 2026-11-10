@@ -147,6 +147,22 @@ skillhub-source: not-managed
       pwsh -File <仓库根>\dsh-restore.ps1 -Snapshot "<拷过来的 dsh-backup-<时间戳> 目录>"
       pwsh -File <仓库根>\dsh-restore.ps1 -Snapshot "<同上>" -Apply -AllowPartial
       ```
+5c. **superagent profile（独立服务，端口 3082）**：它是**独立的 DSH profile + 独立端口**，与日常用的
+    `web` 隔离，不影响 3080。要点（完整步骤与实测输出见 [docs/ops/superagent-profile.md](../ops/superagent-profile.md)）：
+    - 子模块已登记：`dsh-superagent` 指向 `https://github.com/deepseek-ai/dsh-superagent-prototype.git`。
+      新设备 `git submodule update --init dsh-superagent` 后**必须构建**：
+      `pnpm install --node-linker=hoisted && pnpm build`（isolated linker 下 `pnpm build` 报
+      `Cannot find package 'ansis'`；`lib/` 是 gitignored 产物）。
+    - profile 是**从 `web` 复制**的（package.json / cordis.yml / cordis.patch.yml / pnpm-workspace.yaml /
+      pnpm-lock.yaml / .npmrc / patches/），再在 `cordis.patch.yml` 末尾追加 `webserver`(3082) 与
+      `dsh-superagent`(`stateDir`)；不要用 `--from-default-profile` 覆盖，那会丢掉本机层。
+    - 登记：`dsh plugin --profile superagent install` → `dsh plugin --profile superagent add "link:<仓库根>/dsh-superagent"`，
+      再把 `dsh-superagent` 移到 `dsh.profile.bundles` 里 `dsh-config-pack` **之前**。
+    - **必须打补丁**：`pwsh -File docs\ops\patch-dsh-superagent.ps1 -Mode apply`（不打 `stateDir-windows-absolute`
+      会 `did not activate`，服务壳在但 orchestrator 永不就绪）。
+    - 启停：`pwsh -File dsh-superagent-service.ps1 start|stop|status`。验收：3082 监听 + `status` 显示
+      `health : no error entries` + `GET /orchestrator/api/state`（带头 `x-orchestrator-request: 1`）返回 200；
+      `setup : github/repositoryUnset` 属**首次启动的正常状态**，去面板填仓库与 gh CLI 后才开始轮询。
 6. **安装后偏差比较验收**（install.ps1 第 4.6 步已自动跑过一次；手动复核用同一条命令）：
    ```powershell
    node <仓库根>\dsh-config-pack\scripts\verify-install.mjs --profile packed
