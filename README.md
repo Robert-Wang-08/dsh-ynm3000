@@ -224,7 +224,8 @@ dsh plugin --profile web add D:\src\dsh\dsh-plugin-new-session
 | `@local/dsh-preset-failover-tiers` | 0.1.0 @ `b373d1a` | 运行时验证 | web、plugintest | v0.1.0 便携档位表：模型族对齐 tier + transport-safe 终止码 |
 | `dsh-codex-cred-sync` | 1.0.0 @ `8f4586e` | 运行时验证 | web、plugintest | v0.1.0 同步 `llm-pi-ai/<provider>` 与 `~/.pi/agent/auth.json`，最新过期时间优先 |
 | `dsh-permission-compat` | 0.1.0 @ `a8e7e8b` | 0.2.1-rc.5 安装钉适配 | 带外工具，不挂 profile | 0.1.0 适配 0.2.1-rc.5 安装钉与诊断补丁 |
-| `dsh-superagent` | 0.1.0 @ `8c32a9d` | engines dsh `^0.2.1-alpha.2`，0.2.1-rc.5 满足 | 独立 profile `superagent`，端口 3082 | 初始研究原型；Windows `stateDir` 绝对路径补丁见 `docs/ops/superagent-profile.md` |
+| `dsh-superagent` | 0.1.0 @ `8c32a9d` | engines dsh `^0.2.1-alpha.2`，0.2.1-rc.5 满足 | 独立 profile `superagent`，端口 3082 | 初始研究原型；Windows `stateDir` 绝对路径补丁见 `docs/ops/superagent-profile.md`；恢复核实与设置补录见 `docs/ops/superagent-restore-20261110.md` |
+| `dsh-plugin-eye-care-bg` | 0.1.0（root 仓库跟踪） | 运行时验证（无 peer/engines 声明） | 仅 `superagent`（3082 面板） | 0.1.0 护眼页面底色 `#C7EDCC`：纯客户端 CSS 注入，覆盖主题令牌 `--dsw-alias-bg-base`，不注册端点、不持凭据 |
 | `dsh-wechat-hitl` | —（无 `.git`，目录副本） | 未验证 | 未在 web 挂载 | 需先初始化/登记仓库，再按 profile 目录副本方式安装 |
 | `dsh-chat-import` | 0.25.2（npm 最新 0.26.4） | peer dsh `>=0.1.5-rc.1` | web | 外部聊天记录导入，保留工具调用/推理/结果 |
 | `dsh-mermaid-smooth` | 0.1.0 | 运行时验证 | web | Mermaid 默认渲染与平滑缩放/平移 |
@@ -267,7 +268,7 @@ dsh plugin --profile web add D:\src\dsh\dsh-plugin-new-session
 | `web` | 上表 21 个 bundle | 日常主 profile，默认启动 |
 | `plugintest` | 与 web 同构 | 恢复/升级演练用副本 |
 | `packed` | 旧版测试组合（核心 0.2.0-rc.2 + config-pack `32159f3`） | 保留兼容/回归；当前 `--dump-config` 会跳过不兼容的旧 subagent/archived bundle |
-| `superagent` | web 副本 + `dsh-superagent` | 独立服务，`127.0.0.1:3082` |
+| `superagent` | web 副本 + `dsh-superagent` + `dsh-plugin-eye-care-bg`（共 23 个 bundle，`dsh-config-pack` 仍排最后） | 独立服务，`127.0.0.1:3082`；护眼底色只在本 profile 启用 |
 | `headless` | 最小组合 | 无第三方 UI/插件 |
 
 ### 兼容性与验收
@@ -275,6 +276,7 @@ dsh plugin --profile web add D:\src\dsh\dsh-plugin-new-session
 ```powershell
 dsh --version                                      # 必须为 0.2.1-rc.5 或登记的新基线
 dsh --profile web --dump-config > $null            # exit 0；无 did not activate / patch entry not found
+dsh --profile superagent --dump-config > $null     # exit 0；含 eye-care-bg 行；superagent profile 同门槛
 dsh plugin --profile web list
 pwsh -NoProfile -File .\dsh-config-pack\scripts\dsh-backup.ps1 backup -AllProfiles -RehearseOnline
 ```

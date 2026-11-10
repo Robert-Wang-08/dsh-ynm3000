@@ -1,0 +1,36 @@
+{
+  "name": "dsh-plugin-eye-care-bg",
+  "version": "0.1.0",
+  "private": true,
+  "description": "DSH Web 面板护眼底色（默认 #C7EDCC）：只注入一段 CSS，不读写会话、不持凭据。",
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "cordis.patch.yml",
+    "README.md"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": []
+    }
+  },
+  "keywords": [
+    "dsh",
+    "deepseek-harness",
+    "dsh-plugin",
+    "theme",
+    "eye-care"
+  ],
+  "license": "MIT"
+}

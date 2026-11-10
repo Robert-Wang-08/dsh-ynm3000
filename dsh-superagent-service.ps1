@@ -71,9 +71,11 @@ switch ($Action) {
     # 只作兜底保留。可用 -LarkDir 覆盖。
     $larkDir = $LarkDir
     if (-not $larkDir) {
-      $preferred = Join-Path $env:USERPROFILE '.lark-cli-hitl-aa67e4041a381c02'
+      # 2026-11-10：新 bot cli_aa79ee689678dd03（旧 cli_aa67e4041a381c02 已弃用，保留兜底）。
+      $preferred = Join-Path $env:USERPROFILE '.lark-cli-superagent-aa79ee689678dd03'
+      $old = Join-Path $env:USERPROFILE '.lark-cli-hitl-aa67e4041a381c02'
       $legacy = Join-Path $env:USERPROFILE '.lark-cli-dsh-superagent'
-      if (Test-Path $preferred) { $larkDir = $preferred } elseif (Test-Path $legacy) { $larkDir = $legacy }
+      if (Test-Path $preferred) { $larkDir = $preferred } elseif (Test-Path $old) { $larkDir = $old } elseif (Test-Path $legacy) { $larkDir = $legacy }
     }
     if ($larkDir -and (Test-Path $larkDir)) {
       $env:LARKSUITE_CLI_CONFIG_DIR = $larkDir
