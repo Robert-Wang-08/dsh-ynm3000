@@ -6,7 +6,8 @@
 //       → 飞书收到乱路径，返回 404。用 cmd 直接跑同一条命令则正常。
 // 修法：去掉外层 env 前缀（PATH 交给子进程环境），并让 feishu 检查的 run() 不再拼 env。
 export const id = "feishu-probe-no-msys-env";
-export const target = "lib/poll-xx3wdCx6.js";
+// 2026-11-10：tsdown 共享 chunk 带内容哈希、逐版本改名，改用通配（runner 支持 *）。
+export const target = "lib/poll-*.js";
 export const summary = "飞书部署检查去掉 MSYS env 前缀（修 404 page not found）";
 
 export const applied = (text) =>

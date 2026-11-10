@@ -26,3 +26,7 @@
 	path = dsh-wechat-hitl
 	url = https://github.com/Robert-Wang-08/dsh-wechat-hitl.git
 	branch = main
+[submodule "dsh-superagent"]
+	path = dsh-superagent
+	url = https://github.com/deepseek-ai/dsh-superagent-prototype.git
+	branch = main

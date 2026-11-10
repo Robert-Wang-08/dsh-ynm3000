@@ -17,3 +17,6 @@ acl-recovery-route-observation/
 
 # claude-mem 实验项目：独立应用与数据目录（1.5 万+ 文件），不属于本插件/配置仓
 claude-mem-lab/
+
+# PTC 报告/运行产物不入库（2026-11-10 用户指定）；已有历史跟踪文件不自动撤销
+docs/ptc/
