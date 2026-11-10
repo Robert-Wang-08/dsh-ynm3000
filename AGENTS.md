@@ -112,3 +112,12 @@
 - 引擎一致性门槛：`engine-preflight.ps1` 报 `drift` → 停下等人工决策（`bootstrap.ps1 -AcceptDrift` 先备份）；`conflict` → 无法支持，不覆盖、不同步、**不得一键恢复**。
 <!-- END LOCAL:git-work-repo-isolation-pointer -->
 
+## 10. README 插件与 Bundle 登记纪律（2026-11-10）
+
+根 `README.md` 的「插件与 Bundle 登记」是交付物的一部分，不是可选文档。以下变更必须同步更新，未更新视为未完成：
+
+1. **插件登记**：新增、升级、替换或停用插件时，登记名称、当前版本/钉定（`link:` / GitHub commit / npm）、兼容 DSH 版本、启用 profile、最近变更历史（版本 + 摘要）。兼容性以 `peerDependencies` / `engines` 为准；没有显式声明的写“运行时验证”。
+2. **Bundle 登记**：新增、删除或调整 profile bundle 顺序时，登记每个 bundle 的顺序、版本/来源、包含内容/作用、兼容 DSH 版本；同时更新 profile 组合差异表。
+3. **验收**：`dsh --version`、`dsh --profile <p> --dump-config`、`dsh plugin --profile <p> list`、`dsh-backup.ps1 backup -AllProfiles -RehearseOnline`；登记内容必须与实际安装和最新 bundle 一致。
+4. **基线变更**：DSH 宿主升级（如 `0.2.1-rc.5` → 新版本）时，必须整表复核兼容性并更新登记基线日期。
+
