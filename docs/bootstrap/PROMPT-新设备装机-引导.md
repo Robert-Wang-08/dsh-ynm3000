@@ -74,6 +74,12 @@ skillhub-source: not-managed
    - 可选三方插件组（`dsh-recent-sessions`、`dshmarket`、`dsh-plugin-subagent-director`、
      `dsh-palette`）**默认安装**；用户明确不要时加 `-SkipOptional` 整组跳过。
    - 提示 `DSHPACK_KEY_*` 时输入真实密钥（直接回车=跳过，之后可手动补用户环境变量）。
+   - **provider 配置自动迁移**：setup/install/update 会调 `migrate-providers.ps1`，把旧 `DSHPACK_BASE_*`/`DSHPACK_KEY_*`、
+     共享盘 `device-answers.json` 的 `providers` 与 `cordis.local.yml` 合成**完整** `llm-pi-ai` 字面量配置写入 profile 补丁
+     （写前备份 `cordis.patch.yml.bak-before-provider-migration-<时间戳>`）。`apiKeyEnv` 只写变量名；形似密钥的值会被拒绝。
+     验收：`pwsh <仓库根>\dsh-config-pack\scripts\migrate-providers.ps1 -ProfileName <profile> -Check`；
+     回退：停掉 DSH，恢复同一时间点的 `cordis.patch.yml` 与 `.provider-migration.json` 备份。
+     装的是仓库源码（`link:`/junction）时，先在该仓库根 `npm install`（迁移脚本依赖 `yaml`，tag 安装由 pnpm 自动装）。
    - 若报 `ERR_PNPM_EXOTIC_SUBDEP` / `ERR_PNPM_IGNORED_BUILDS`：install.ps1 会自愈重试；
      仍失败时把完整报错给用户，不要手改配置硬闯。
    - **总仓库里的本地插件不随 `setup.ps1` 自动登记**（config-pack 只管它自己那套 bundle），
