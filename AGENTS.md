@@ -50,11 +50,18 @@
 4. **改完必须验收**：启动无 `did not activate`、无 `patch: entry ... not found`；配置包场景跑 `verify.mjs --composed <dump>` 须 0 dangling；`--dump-config` 回显的是未求值的 `!!js` 源，exit 0 不代表表达式正确。
 5. **生效条件**：工具表在会话启动时生成——插件变更后必须重启 DSH 并新开会话，旧会话看不到新工具。
 6. **主控会话不能热切换 provider**：失败后必须新建会话按链重选；host failover 不重派子代理（`subagent_codex` 挂了不会自动变 `subagent_codex_relay`）。
+7. **插件安装闸门（2026-11-06 事故后新增，硬性）**：
+   - **先测试 profile，后生产 profile**：第三方/实验插件一律先装进测试 profile（约定 `plugtest`，端口 3081；未建立时按 live `web` 的 `dependencies`、`dsh.profile.bundles`、`cordis.patch.yml`、`vendor/`、`patches/`、`compatibility.json`、`pnpm-lock.yaml` 复制建立），在那边跑通「启动无 `did not activate`、`--dump-config` 0 dangling、界面入口出现、工具表在新会话里可见」之后，才允许进 `web`。
+   - **禁止在活动 profile 上直接改**：`dsh plugin add/remove` 会在该 profile 内跑 `pnpm install` 并改写 `package.json`/bundles，运行中的宿主随之热重载层栈，**会打断该宿主上所有正在跑的会话回合**。改任何有活动会话的 profile 前，先停它的 `dsh web` 进程，改完再起。
+   - **安装前先看 `engines.dsh`**：声明范围不含当前 dsh 版本时（现例：`dsh-worktable@0.5.0` 要求 `0.2.0-rc.2 || 0.2.1-rc.3`，当前 `0.2.1-rc.5`），要么升级插件，要么 `dsh plugin allow-version` 显式豁免；否则启动即被 deny，并可能在后续安装中被连带清掉。
+   - **装完核对实际版本**：新版本冷却策略会把「最新」降到更旧版本（2026-11-06 实测 `dsh-plugin-sessivra` 想要 `0.3.0-dev.26`，实装 `0.3.0-dev.25`），以 profile `package.json` 落盘值为准，别按 registry `latest` 汇报。
+   - **事故留档**：2026-11-06 10:54 在 live `web`（3080）直接 `add dsh-plugin-sessivra` / `add dsh-split-view`，11:11 与 11:21 另有四次非本会话发起的 pnpm 操作，11:35 宿主重启，全部在跑会话中断。证据：`profiles/web/.plugin-manager/logs/operation-*`、`~/.dsh/backups/dsh-backup-20261106-105349`（安装前）、`dsh-backup-20261106-112138-500`（清理后，仍含 `dsh-taskboard`/`dsh-worktable`）。
 
 ## 5. 备份与恢复约束（用 `dsh-backup-restore` skill）
 
 - **什么必须备份**：改 profile 配置/插件清单之前；升级 config-pack 或 failover 之前；达到一个"验证通过"的稳定状态之后（留档）。
 - **一键入口**：`dsh-config-pack/scripts/dsh-backup.ps1`。`backup` 把当前 profile 写成 `%USERPROFILE%\.dsh\backups\dsh-backup-<时间戳>`；`restore` 默认只打印计划，`-Apply` 前自动写 `pre-restore-<时间戳>`。partial 快照写回要加 `-AllowPartial`。
+- **改完配置的一键留档**：`scripts/config-snapshot.ps1`（backup/verify/restore/list）。它只钉住 10 个关键文件（web/plugtest 的 `cordis.patch.yml`+`package.json`、`pnpm-workspace.yaml`、`AGENTS.md`、PTC 的 bundle patch / `public-runtime-config.json` / `SKILL.md` / `ptc_route.py`），带 SHA256 manifest 与 DryRun 回滚，快照写 `~/.dsh/backups/ptc-config-<UTC>`；与上面的整 profile 快照互补，不替代。
 - **恢复协议**：先 `restore`（默认 DryRun）给用户看计划 → `-Apply` 时脚本自动先做 `pre-restore` 安全备份 → 重启 DSH 新开会话 → 按第 4 条验收。
 - **恢复插件**：配置文件恢复后优先 `pnpm install`（快路径，脚本已为每个 profile 生成 `reinstall-plugins.ps1`）；逐个 `dsh plugin add` 是稳路径，须遵守第 4 条三约束。
 - **备份范围**：仅配置与插件数据（profiles 的配置文件、`plugins/` 运行数据、`.agent-presets`、`device/`）；`sessions/`、`attachments/`、`logs/`、`storages/`、`node_modules/` 不备份（会话归档由 `dsh-archived-sessions` 插件管）。

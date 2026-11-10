@@ -17,6 +17,12 @@ pwsh -File docs\ops\patch-dsh-superagent.ps1 -Mode apply -AllProfiles
 
 ## 补丁清单
 
+> **2026-11-10 起：下表两项修复已下沉到源码**（`D:\src\dsh-superagent`，就是 3082 profile 的 `link:` 目标，它的 `node_modules/dsh-superagent` 指的就是这个目录）。
+> 因此 `pnpm build` 重建 `lib/*` 不会再丢这两项；同时 `lib` 里的分块文件名会变（`poll-xx3wdCx6.js` → `poll-CWrf6vkn.js` 等），
+> 本目录的 **lib 级补丁视为已废止**，只在 `verify` 报 `target missing` 时按源码位置核对：
+> - 飞书探测的 `env` 前缀 → `src/deployment.ts` 的 `workerProbe` / `resolveFeishuBot`；
+> - 主会话 `tools.restrict` 的 `bash` → `src/app/sessions.ts` 的 `masterTools`。
+
 | 文件 | id | 目标 | 修什么 |
 |---|---|---|---|
 | `feishu-probe.mjs` | `feishu-probe-no-msys-env` | `lib/poll-xx3wdCx6.js` | 部署检查经 MSYS `env` 执行 lark-cli，`env` 把 `/open-apis/...` 改写成 Windows 路径 → `404 page not found`（面板表现为「机器人的 lark-cli 不可用」） |

@@ -34,6 +34,8 @@ git clone --recurse-submodules https://github.com/Robert-Wang-08/dsh-ynm3000.git
 
 根目录的 `dsh-menu.ps1` 是本机运维入口。公开发布的一键安装仍走 `dsh-config-pack` 的 GitHub tag，不从本仓库安装。
 
+`superagent` 是本机第二个**独立服务**（profile `superagent`，端口 3082，继承 web profile 的插件与配置，另加 `dsh-superagent` bundle）：用 `dsh-superagent-service.ps1` 启停/查状态，web 侧配置变更后重跑 `dsh-superagent-profile-sync.ps1` 同步，细节与验收见 [docs/ops/superagent-service.md](docs/ops/superagent-service.md)。
+
 ## 新设备安装
 
 在 `dsh-config-pack` 里一条命令。有共享盘就读已经填好的答案；没有就用包内模板，或把说明交给 AI。然后装包、写路由、设置用户环境变量。密钥不进答案文件。
