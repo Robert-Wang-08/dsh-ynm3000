@@ -1,8 +1,8 @@
 # dsh-ynm3000（superagent 通道已验证）
 
-> **下载使用**：适合**多 provider、多 LLM、遇阻自动切换**的重度用户——在任何新/旧机器上一条命令配好四档故障转移路由（QUOTA/AUTH/限流即切）、PTC 多代理编排与会话增强插件集，只需 `pwsh scripts/install.ps1 -ProfileName <你的profile>`（或把本仓库 README 交给 AI 代办），源与文档见 [github.com/Robert-Wang-08/dsh-config-pack](https://github.com/Robert-Wang-08/dsh-config-pack)（tag `v0.9.6`，含 `verify-install` 偏差验收与共享盘/模板两种答案方式）。**新设备装机：请让 AI 读取本 README 与 [docs/bootstrap/PROMPT-新设备装机-引导.md](docs/bootstrap/PROMPT-新设备装机-引导.md)，按引导自动完成装依赖、装 DSH、克隆仓库群、一键恢复与偏差验收。**
+> **下载使用**：适合**多 provider、多 LLM、遇阻自动切换**的重度用户——在任何新/旧机器上一条命令配好四档故障转移路由（QUOTA/AUTH/限流即切）、PTC 多代理编排与会话增强插件集，只需 `pwsh dsh-config-pack\scripts\install.ps1 -ProfileName <你的profile>`（或把本仓库 README 交给 AI 代办），源与文档见 [github.com/Robert-Wang-08/dsh-config-pack](https://github.com/Robert-Wang-08/dsh-config-pack)（tag `v0.11.7`，含 `verify-install` 偏差验收与共享盘/模板两种答案方式）。**新设备装机：请让 AI 读取本 README 与 [docs/bootstrap/PROMPT-新设备装机-引导.md](docs/bootstrap/PROMPT-新设备装机-引导.md)，按引导自动完成装依赖、装 DSH、克隆仓库群、一键恢复与偏差验收。**
 
-> **本版本（config-pack v0.9.6 · DSH 0.2.0-rc.2）能力一览**：一条命令为任意 profile 装好并钉死 16 项核心插件（官方 base/web-app/MCP 客户端 + ACP 三子代理 + provider-failover 四档故障转移路由 + 会话归档/侧栏管理/provider 徽标/子代理监控等增强）与 4 项可选三方件（recent-sessions/dshmarket/director/palette，`-SkipOptional` 可跳过），同时组合出 PTC 多代理编排预设、MCP 服务器开关、agent 预设与密钥指针配置层，全部组件锁钉不可变 tag、装完自动执行插件/配置偏差比较验收。
+> **本版本（config-pack v0.11.7 · DSH 0.2.1-rc.5）能力一览**：一条命令为任意 profile 装好并钉死 16 项核心插件（官方 base/web-app/MCP 客户端 + ACP 三子代理 + provider-failover 四档故障转移路由 + 会话归档/侧栏管理/provider 徽标/子代理监控等增强）与 4 项可选三方件（recent-sessions/dshmarket/director/palette，`-SkipOptional` 可跳过），同时组合出 PTC 多代理编排预设、MCP 服务器开关、agent 预设与密钥指针配置层，全部组件锁钉不可变 tag、装完自动执行插件/配置偏差比较验收。
 
 DSH 插件与配置的总仓库。各插件仍是独立仓库，这里只用 submodule 记下路径、远程地址和当前提交。
 
@@ -35,13 +35,11 @@ git clone --recurse-submodules https://github.com/Robert-Wang-08/dsh-ynm3000.git
 
 根目录的 `dsh-menu.ps1` 是本机运维入口。公开发布的一键安装仍走 `dsh-config-pack` 的 GitHub tag，不从本仓库安装。
 
-`superagent` 是本机第二个**独立服务**（profile `superagent`，端口 3082，继承 web profile 的插件与配置，另加 `dsh-superagent` bundle）：用 `dsh-superagent-service.ps1` 启停/查状态，web 侧配置变更后重跑 `dsh-superagent-profile-sync.ps1` 同步，细节与验收见 [docs/ops/superagent-service.md](docs/ops/superagent-service.md)。
-
 ## 新设备安装
 
 在 `dsh-config-pack` 里一条命令。有共享盘就读已经填好的答案；没有就用包内模板，或把说明交给 AI。然后装包、写路由、设置用户环境变量。密钥不进答案文件。
 
-**让 AI 自动配置（推荐入口）**：把 [`docs/bootstrap/PROMPT-新设备装机-引导.md`](docs/bootstrap/PROMPT-新设备装机-引导.md) 整段交给新设备的 AI 代理执行——它覆盖装依赖、装 DSH（钉 `0.2.0-rc.2`）、克隆本仓库群、从共享盘一键还原、验收与报告。三方插件（recent-sessions / dshmarket / director / palette）默认安装，prompt 里有 `-SkipOptional` 跳过开关。
+**让 AI 自动配置（推荐入口）**：把 [`docs/bootstrap/PROMPT-新设备装机-引导.md`](docs/bootstrap/PROMPT-新设备装机-引导.md) 整段交给新设备的 AI 代理执行——它覆盖装依赖、装 DSH（钉 `0.2.1-rc.5`）、克隆本仓库群、从共享盘一键还原、验收与报告。三方插件（recent-sessions / dshmarket / director / palette）默认安装，prompt 里有 `-SkipOptional` 跳过开关。
 
 没有共享盘、交给 AI 时，让 AI 读 `dsh-config-pack/docs/AI-DEVICE-SETUP.md`。生成的文件放到 `%USERPROFILE%\.dsh\device\`，再重新运行下面的命令。
 
@@ -52,7 +50,7 @@ git clone --recurse-submodules https://github.com/Robert-Wang-08/dsh-ynm3000.git
 英文图：[setup-flow_v2_en.svg](attachments/setup-flow_v2_en.svg)
 
 ```powershell
-pwsh -File dsh-config-pack\scripts\setup.ps1 -Source 'github:Robert-Wang-08/dsh-config-pack#v0.9.6'
+pwsh -File dsh-config-pack\scripts\setup.ps1 -Source 'github:Robert-Wang-08/dsh-config-pack#v0.11.7'
 ```
 
 ```mermaid
@@ -83,24 +81,35 @@ pwsh -File dsh-config-pack\scripts\update.ps1 -SkipOptional       # 不动可选
 
 边界：设备个人答案与密钥不动（密钥只在用户环境变量）；云盘 `route-config.json` / 个人答案有变更时用 `pwsh scripts/setup.ps1 -UpdateRoutes` 同步路由；源设备 `web` 这类 link: 开发态 profile，`git pull` + 重启即生效，不走本流程。
 
-## 本机研发：一键提交与备份
+## DSH 收口备份与一键恢复
 
-改了插件/配置之后要把本工作区（根仓库 + 6 个子仓库）的改动一次提交、并在提交前留一份本机配置备份：
+「收口备份」= 把工作区（根仓库 + 全部子仓库）未提交的改动按显式路径提交，同时把**全部 profile** 打成一份可跨机恢复的 bundle；换机时用 `dsh-restore.ps1` 一键恢复。备份与恢复入口都在仓库根目录：
 
 ```powershell
-pwsh -NoProfile -File .\dsh-commit-backup.ps1 -Status                          # 只盘点
-pwsh -NoProfile -File .\dsh-commit-backup.ps1 -Message "chore: <本次说明>"      # 备份 + 提交
-pwsh -NoProfile -File .\dsh-commit-backup.ps1 -Message "chore: <本次说明>" -Push  # 再推送
-pwsh -NoProfile -File .\dsh-commit-backup.ps1 -Rehearse -Message "chore: 收口" -Push  # 带离线隔离安装演练
-pwsh -NoProfile -File .\dsh-commit-backup.ps1 -RehearseOnline -Message "chore: 收口" -Push  # store 缺 tarball 时用在线演练
-pwsh -NoProfile -File .\dsh-config-pack\scripts\dsh-backup.ps1 backup          # 只备份
-pwsh -NoProfile -File .\dsh-config-pack\scripts\dsh-backup.ps1 restore -Snapshot <快照目录>          # 只看恢复计划
-pwsh -NoProfile -File .\dsh-config-pack\scripts\dsh-backup.ps1 restore -Snapshot <快照目录> -Apply -AllowPartial
+# 只盘点（不备份、不提交）
+pwsh -NoProfile -File .\dsh-commit-backup.ps1 -Status
+
+# 收口备份：全 profile bundle + 提交 + 推送（一句话入口）
+pwsh -NoProfile -File .\dsh-commit-backup.ps1 -Push -Message "chore: 收口备份"
+
+# 恢复：默认只出计划；确认后写回（每个 profile 先写 pre-restore 安全快照）
+pwsh -NoProfile -File .\dsh-restore.ps1 -List
+pwsh -NoProfile -File .\dsh-restore.ps1 -Snapshot <bundle 目录>
+pwsh -NoProfile -File .\dsh-restore.ps1 -Snapshot <bundle 目录> -Apply -AllowPartial
+
+# 可选：只备份当前 profile（旧行为）；请求隔离安装演练
+pwsh -NoProfile -File .\dsh-commit-backup.ps1 -SingleProfile -Message "chore: 单 profile 备份"
+pwsh -NoProfile -File .\dsh-commit-backup.ps1 -RehearseOnline -Push -Message "chore: 收口"
 ```
 
-先子仓库、根仓库最后；只暂存 `git status` 解析出的显式路径（不执行 `git add .`）；凭据文件、`.ptc/`、
-`.tmp-*`、`downloads/` 等本机产物永不入库；从不 force push。用法、参数、排除规则与已知限制见
-[docs/ops/一键提交与备份.md](docs/ops/一键提交与备份.md)。
+- **完成判据**：退出码 0 **且** 回执 `.ptc\reports\commit-backup-<UTC>.json` 的 `backup.status=ok`（`bundle.json` 可读、`failed=0`）。只看到「备份完成」一行不算。
+- **bundle 布局**：`%USERPROFILE%\.dsh\backups\dsh-backup-<时间戳>\profiles\<profile>\` 下每个 profile 一份 `dsh-snapshot/v1`，根目录 `bundle.json`（`schema=dsh-backup-bundle/v1`）；默认启动 profile 仍是 `web`，恢复不改启动命令。
+- **范围**：profile 配置与插件数据；凭据值、会话、附件、日志、`node_modules` 不进快照。未加 `-Rehearse` 的备份是 partial，写回必须显式 `-AllowPartial`。
+- **引擎门槛**：`engine-preflight` 为 `conflict` 时恢复硬阻断；`drift` 需人工确认后加 `-AcceptEngineDrift`。
+- **提交纪律**：先子仓库、根仓库最后；只暂存 `git status` 解析出的显式路径（不执行 `git add .`）；凭据文件、`.ptc/`、`.tmp-*`、`downloads/` 等本机产物永不入库；从不 force push。
+- 配置包单入口仍可用：`dsh-config-pack\scripts\dsh-backup.ps1 backup -AllProfiles` / `restore -AllProfiles -Snapshot <目录>`。
+
+一句话版本说明见 [docs/ops/DSH-一键备份与恢复-简要说明.md](docs/ops/DSH-一键备份与恢复-简要说明.md)；完整参数、排除规则与已知限制见 [docs/ops/一键提交与备份.md](docs/ops/一键提交与备份.md)；换机步骤见 [新设备装机引导](docs/bootstrap/PROMPT-新设备装机-引导.md)。
 
 ## 能力清单（逐组件：用途与 fix 原因）
 
