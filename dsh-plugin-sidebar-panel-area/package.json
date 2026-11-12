@@ -1,0 +1,51 @@
+{
+  "name": "@local/dsh-plugin-sidebar-panel-area",
+  "description": "DSH Web 增强插件：左侧栏插件入口区可折叠 + 高度可拖拽（localStorage 记忆）",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./client": {
+      "types": "./lib/client.d.ts",
+      "default": "./lib/client.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-sidebar"
+      ],
+      "platform": "web"
+    }
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "^4.0.2"
+  },
+  "devDependencies": {
+    "@deepseek-ai/cordis": "^4.0.2",
+    "tsdown": "^0.12.0",
+    "typescript": "^5.6.0"
+  },
+  "files": [
+    "lib/index.js",
+    "lib/client.js",
+    "lib/*.d.ts",
+    "cordis.patch.yml"
+  ],
+  "scripts": {
+    "bundle": "tsdown && node scripts/finalize-client-bundle.mjs",
+    "prepare": "pnpm run bundle",
+    "verify": "node scripts/finalize-client-bundle.mjs",
+    "watch": "tsdown --watch"
+  }
+}

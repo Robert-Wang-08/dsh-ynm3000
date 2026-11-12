@@ -1,0 +1,4 @@
+# Bundle patch layer: mount the host half; package.json dsh.client loads ./client.
+- insert:
+    - id: sidebar-panel-area
+      name: '@local/dsh-plugin-sidebar-panel-area'

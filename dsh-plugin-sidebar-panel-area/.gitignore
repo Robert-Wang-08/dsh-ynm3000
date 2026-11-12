@@ -1,0 +1,18 @@
+# Dependencies
+node_modules/
+
+# Build output is committed so a link:-installed profile gets it on pull;
+# regenerate with `pnpm run bundle` before committing source changes.
+lib/*.tsbuildinfo
+
+# Local safety backups
+.bak-*/
+
+# Packing and build caches
+*.tgz
+*.tsbuildinfo
+
+# Editor and operating-system files
+.DS_Store
+Thumbs.db
+Desktop.ini
