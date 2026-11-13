@@ -83,7 +83,7 @@ pwsh -File dsh-config-pack\scripts\update.ps1 -SkipOptional       # 不动可选
 
 ## 本机研发：一键提交与备份
 
-改了插件/配置之后要把本工作区（根仓库 + 6 个子仓库）的改动一次提交、并在提交前留一份本机配置备份：
+改了插件/配置之后要把本工作区（根仓库 + 8 个子仓库，共 9 个仓库）的改动一次提交、并在提交前留一份本机配置备份。脚本动态发现根目录下带 `.git` 的仓库，已包含 `dsh-superagent`；`focus-hub` 仍需显式纳入：
 
 ```powershell
 pwsh -NoProfile -File .\dsh-commit-backup.ps1 -Status                          # 只盘点
@@ -99,6 +99,8 @@ pwsh -NoProfile -File .\dsh-config-pack\scripts\dsh-backup.ps1 restore -Snapshot
 先子仓库、根仓库最后；只暂存 `git status` 解析出的显式路径（不执行 `git add .`）；凭据文件、`.ptc/`、
 `.tmp-*`、`downloads/` 等本机产物永不入库；从不 force push。用法、参数、排除规则与已知限制见
 [docs/ops/一键提交与备份.md](docs/ops/一键提交与备份.md)。
+
+Windows 快捷入口：`launch-superagent.cmd` 默认委托现有服务脚本启动 superagent 并打开管理页；`launch-superagent.cmd status` / `url` 可查询状态或地址。它不会构建代码或安装插件。新改动只有在子仓库成功推送、远端可读取该 SHA 后，才能更新并推送根仓库的子模块指针。
 
 ## 能力清单（逐组件：用途与 fix 原因）
 
@@ -210,7 +212,7 @@ dsh plugin --profile web add D:\src\dsh\dsh-plugin-new-session
 
 | 插件 | 版本 / 钉定 | 兼容 DSH | 启用位置 | 最近变更历史 |
 |---|---|---|---|---|
-| `dsh-config-pack` | 0.11.7 @ `71b2e1a` | peer base/web-app = 0.2.1-rc.5 | web、plugintest、superagent、packed | 0.11.7 多 profile bundle 与恢复；0.11.6 adapter/公共通道分表；2026-11-10 provider 字面量与旧设备变量迁移 |
+| `dsh-config-pack` | 0.11.7 @ `6e4ac9d` | peer base/web-app = 0.2.1-rc.5 | web、plugintest、superagent、packed | 0.11.7 多 profile bundle 与恢复；0.11.6 adapter/公共通道分表；2026-11-10 provider 字面量与旧设备变量迁移；2026-11-13 刷新模型目录并修正元数据说明 |
 | `dsh-deepseek-keypool`（仓库 `dsh-provider-failover`） | 3.8.3 @ `29c7309`（最新 tag v3.6.0） | 运行时验证 | web、plugintest、superagent、packed | 3.8.3 裸 HTTP/2 stream 失败恢复；3.8.2 原始错误与定时重试状态；3.8.0 设置页列出全部 key |
 | `@jiangdaoli/dsh-archived-sessions` | 0.4.4 @ `fffe92f` | peer 精确 0.2.1-rc.5 | web、plugintest、superagent | 0.4.4 重写 lockfile 通过 frozen install；0.4.3 peer/dev 升级到 0.2.1-rc.5；0.4.1 适配 DSH 0.2 |
 | `@local/dsh-plugin-sidebar-visibility` | 0.0.7 @ `64eda5c` | 运行时验证 | web | v0.0.7 未读亮点；v0.0.4 非当前会话运行行模型色；v0.0.3 rc.2 目录树与运行中转圈 |
@@ -259,7 +261,7 @@ dsh plugin --profile web add D:\src\dsh\dsh-plugin-new-session
 | 18 | `dshmarket` | 1.66.21 | 插件市场 | 运行时 |
 | 19 | `dsh-plugin-subagent-monitor` | 0.1.0 | 子代理/后台任务可见性 | 运行时 |
 | 20 | `dsh-plugin-subagent-director` | 0.6.0-beta.2 | 子代理 provider/model 调度 | 运行时 |
-| 21 | `dsh-config-pack` | 0.11.7 @ `71b2e1a` | profile patch 层、agent 预设、provider 路由、备份/恢复 | peer 精确 |
+| 21 | `dsh-config-pack` | 0.11.7 @ `6e4ac9d` | profile patch 层、agent 预设、provider 路由、备份/恢复 | peer 精确 |
 
 ### Profile 组合差异
 
