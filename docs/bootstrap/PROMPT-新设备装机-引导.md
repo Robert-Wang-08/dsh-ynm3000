@@ -155,7 +155,10 @@ skillhub-source: not-managed
       ```
 5c. **superagent profile（独立服务，端口 3082）**：它是**独立的 DSH profile + 独立端口**，与日常用的
     `web` 隔离，不影响 3080。要点（完整步骤与实测输出见 [docs/ops/superagent-profile.md](../ops/superagent-profile.md)）：
-    - 子模块已登记：`dsh-superagent` 指向 `https://github.com/deepseek-ai/dsh-superagent-prototype.git`。
+    - 子模块已登记：`dsh-superagent` 指向维护 fork `https://github.com/Robert-Wang-08/dsh-superagent-prototype.git`，包含已验证回复修复 `c0b7df4`；原上游为 `deepseek-ai/dsh-superagent-prototype`。
+      旧设备更新根仓库后，先确认 `git -C dsh-superagent status --porcelain` 无输出，再执行
+      `git submodule sync -- dsh-superagent` 与 `git submodule update --init -- dsh-superagent` 同步来源和钉定提交；有本地修改时先停止并保存，不使用 force/reset。
+      以上只更新源码，不自动构建或重启；构建后仍需下述 apply/verify 补丁，启停服务另行授权。
       新设备 `git submodule update --init dsh-superagent` 后**必须构建**：
       `pnpm install --node-linker=hoisted && pnpm build`（isolated linker 下 `pnpm build` 报
       `Cannot find package 'ansis'`；`lib/` 是 gitignored 产物）。
