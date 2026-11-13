@@ -1,0 +1,22 @@
+{
+  "schema": "design-receipt/v1",
+  "ticket": "da9baec1170cd5b78589165bb3ae8d56",
+  "stage": "opus5-challenge",
+  "model": "claude-opus-5",
+  "route": "anthropic-relay /v1/messages (stream; ai.orbitlink.me)",
+  "prompt_file": "C:\\Users\\wwm_1\\.dsh\\state\\superagent\\work\\session-aggregation-design-da9baec1170c\\prompts\\challenge-opus5-short.md",
+  "prompt_sha256": "9525d8db8a99891857097c766bf64d9e5a46fa97a74c8db0aa92cfbb4aaf14d6",
+  "output_file": "C:\\Users\\wwm_1\\.dsh\\state\\superagent\\work\\session-aggregation-design-da9baec1170c\\outputs\\opus5-challenge.md",
+  "output_sha256": "6fc6f9aa43d5db52d2f25e623f9cf27f0f7f5da41784e92ab047bec4aec28662",
+  "output_bytes": 22137,
+  "usage": {
+    "input_tokens": 4,
+    "output_tokens": 6699,
+    "cache_creation_input_tokens": 5183,
+    "cache_read_input_tokens": 18373
+  },
+  "generated_at": "2026-11-12T22:14:55+08:00",
+  "status": "captured",
+  "verification": "non-empty output captured; model id is the caller-configured route, not independently attested by the provider",
+  "notes": "因非流式请求两次 524，改用流式客户端；输出为 v1.0 设计的挑战，v1.1 洞察专项由主控补审"
+}

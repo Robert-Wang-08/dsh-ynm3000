@@ -1,0 +1,22 @@
+{
+  "schema": "design-receipt/v1",
+  "ticket": "da9baec1170cd5b78589165bb3ae8d56",
+  "stage": "kimi-k3-challenge",
+  "model": "k3",
+  "route": "kimi-coding /chat/completions (api.kimi.com/coding)",
+  "prompt_file": "C:\\Users\\wwm_1\\.dsh\\state\\superagent\\work\\session-aggregation-design-da9baec1170c\\prompts\\challenge-kimi-k3-full.md",
+  "prompt_sha256": "11170086cf52f2dfc9989fd96fc5787810a034b09c4a1211b64ab919598b73e5",
+  "output_file": "C:\\Users\\wwm_1\\.dsh\\state\\superagent\\work\\session-aggregation-design-da9baec1170c\\outputs\\kimi-k3-challenge.md",
+  "output_sha256": "204cce164966ca6409022dbab2f7d8c63e786cb695aa96d5bb99cffddb731c64",
+  "output_bytes": 13641,
+  "usage": {
+    "prompt_tokens": 8577,
+    "completion_tokens": 6352,
+    "total_tokens": 14929,
+    "reasoning_tokens": 2786
+  },
+  "generated_at": "2026-11-12T22:07:35+08:00",
+  "status": "captured",
+  "verification": "non-empty output captured; model id is the caller-configured route, not independently attested by the provider",
+  "notes": "独立挑战；temperature=1（该模型仅允许 1）"
+}

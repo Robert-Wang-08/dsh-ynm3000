@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.0",
+  "contract_name": "superagent-health-report-design",
+  "objective_guard": "仅设计；不启用推送，不修改运行配置",
+  "deliverables": [
+    {
+      "id": "design",
+      "kind": "document",
+      "path_pattern": "docs/design/superagent-health-report/*.md",
+      "format": "Markdown UTF-8",
+      "required": true,
+      "acceptance": [
+        "初稿先于两位独立评审",
+        "覆盖心跳、实际模型、当日会话状态、one-line recap、未完成与人工裁决、可选dashboard用量",
+        "明确证据与待验证接口、可靠投递和验收",
+        "主控合并Opus5和KimiK3挑战"
+      ]
+    }
+  ],
+  "worker_output": {
+    "format": "JSON",
+    "schema": "C:/Users/wwm_1/.agents/skills/ptc-multi-agent-control/assets/worker-receipt.schema.json"
+  }
+}

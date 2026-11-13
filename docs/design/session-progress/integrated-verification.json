@@ -1,0 +1,9 @@
+{
+  "browser": "headless Chrome, isolated temporary profile",
+  "passed": 104,
+  "urlReload": true,
+  "inlineSyntax": true,
+  "offlineCsp": true,
+  "htmlBytes": 77273,
+  "canonicalNodes": 37
+}

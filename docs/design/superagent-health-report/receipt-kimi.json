@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.0",
+  "receipt_id": "controller-accepted-kimi3-002",
+  "task_id": "health-db09dbce-8aef-4c35-acd6-d479d3270c3c",
+  "subtask_id": "challenge-kimi3",
+  "route": "docs-kimi",
+  "executor": "subagent (kimi-coding)",
+  "model": "k3-256k",
+  "outcome": "completed",
+  "summary": "Kimi v2独立挑战已收到；主控按源码裁决，拒绝ended+ready自动复活、删除持久化投递保障、旧notifier在跑的无证据断言。",
+  "files_changed": [],
+  "validation": [
+    "worker核实dashboard session-过滤与启动scan、Superagent workerSessionId及ticketStage",
+    "主控额外验证worker-真实目录存在",
+    "主控通过子会话06825f19-6621-46f2-99c2-dc500c39938d modelSelection.lastUsed核验kimi-coding/k3-256k high，替换worker自身unverified字段"
+  ],
+  "risks": [
+    "dashboard在线授权未验证",
+    "专属用量需补目录覆盖与session集合过滤"
+  ]
+}

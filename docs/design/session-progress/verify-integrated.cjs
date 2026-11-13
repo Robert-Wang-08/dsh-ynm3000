@@ -1,0 +1,16 @@
+const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
+const root=__dirname,html=fs.readFileSync(path.join(root,'integrated-prototype.html'),'utf8');
+const js=html.split('<script>')[1].split('</script>')[0];new vm.Script(js);
+const dom=fs.readFileSync(path.join(root,'integrated-test-dom.html'),'utf8');
+const body=dom.match(/<body[^>]*>/)?.[0]||'';
+const block=dom.match(/<pre id="integration-test-result"[^>]*>([\s\S]*?)<\/pre>/)?.[1]||'';
+console.log(body);if(!body.includes('data-integration-test="passed"'))console.log(block.slice(-14000));
+if(!body.includes('data-integration-test="passed"'))throw Error('Actual Chrome integration selftest failed');
+if(!html.includes("connect-src 'none'"))throw Error('Missing offline CSP');
+if(/<script[^>]+src=|<link[^>]+href=|fetch\(|WebSocket\(|localStorage\./.test(html))throw Error('Unexpected network or persistence primitive');
+const reload=fs.readFileSync(path.join(root,'integrated-reload-dom.html'),'utf8');
+if(!reload.match(/<body[^>]*data-restore-test="passed"/))throw Error('Deep-link reload did not restore L3 focus/selection/view');
+const count=(block.match(/PASS /g)||[]).length;
+const out={browser:'headless Chrome, isolated temporary profile',passed:count,urlReload:true,inlineSyntax:true,offlineCsp:true,htmlBytes:Buffer.byteLength(html),canonicalNodes:37};
+fs.writeFileSync(path.join(root,'integrated-verification.json'),JSON.stringify(out,null,2)+'\n');
+console.log('RESULT '+JSON.stringify(out));

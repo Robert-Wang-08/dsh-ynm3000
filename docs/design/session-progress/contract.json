@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.0",
+  "contract_name": "session-progress-design-v1",
+  "objective": "盘点存量；Opus5.5设计，KimiK3与6.1sol主控挑战；交付DAG、看板+折叠列表、多轨行进三种可钻取参考稿和skill优先同步方案。",
+  "deliverables": [
+    {
+      "path": "docs/design/session-progress/",
+      "acceptance": [
+        "存量有文件证据",
+        "三个同数据视图支持L1/L2/L3上钻下钻",
+        "轨道图汇合不伪造依赖",
+        "记录两路挑战与取舍",
+        "明确同步权限和复杂度预算"
+      ]
+    }
+  ],
+  "exclusions": [
+    "不部署插件",
+    "不改DSH本体/profile",
+    "不扫描或公开原始私人会话",
+    "本轮先设计，正式skill扩展待方案选定"
+  ],
+  "worker_output": "PTC receipt schema 1.0"
+}

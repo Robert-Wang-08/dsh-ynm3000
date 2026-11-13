@@ -1,0 +1,633 @@
+{
+  "schemaVersion": "p0-1",
+  "asOf": "2026-11-12T14:06:20.198193+08:00",
+  "timezone": "Asia/Shanghai",
+  "windowStart": "2026-11-12T00:00:00+08:00",
+  "windowEnd": "2026-11-12T14:06:20.198193+08:00",
+  "mode": "dry-run-no-send",
+  "instances": [
+    {
+      "port": 3082,
+      "httpStatus": 200,
+      "health": "online_degraded",
+      "componentStates": {
+        "runtime": "ready",
+        "relay": "ready",
+        "notice": "ready",
+        "launch": "ready",
+        "delivery": "ready",
+        "assessment": "ready",
+        "reply": "error",
+        "evals": "ready",
+        "models": "ready",
+        "github": "ready",
+        "feishu": "ready",
+        "history": "error"
+      },
+      "errorComponents": [
+        "reply",
+        "history"
+      ],
+      "paused": false,
+      "loopLiveness": "unverified",
+      "openTickets": 2,
+      "openObserved": 2,
+      "openStages": {
+        "working": 1,
+        "idle": 1
+      },
+      "humanItemsObserved": 0,
+      "humanActionCounts": {},
+      "todayCompletedTicketsObserved": 12,
+      "todayEndedOutcomes": {
+        "completed": 12
+      },
+      "todayActiveSessions": null,
+      "todayActiveSessionsReason": "execution event feed not read; ticket updates and creation are not execution evidence",
+      "openPagination": {
+        "complete": true,
+        "total": 2,
+        "consistency": "nontransactional"
+      },
+      "endedPagination": {
+        "complete": true,
+        "total": 33,
+        "consistency": "nontransactional"
+      },
+      "recapAvailability": {
+        "openWithSummary": 1,
+        "summaryTimestampInList": "not_proven",
+        "summaryTextExported": false,
+        "fallback": "暂无可用的可追溯摘要"
+      },
+      "models": [
+        {
+          "role": "master",
+          "selection": [
+            {
+              "provider": "openai-codex",
+              "model": "gpt-6.1-sol",
+              "reasoningEffort": null
+            }
+          ],
+          "metadataMtime": "2026-11-12T06:02:28.172864+00:00",
+          "quality": "last_selection_only_not_inflight_or_success"
+        },
+        {
+          "role": "worker_historical",
+          "selection": [
+            {
+              "provider": "opencode-go",
+              "model": "deepseek-v4.1-flash",
+              "reasoningEffort": null
+            }
+          ],
+          "metadataMtime": "2026-11-12T05:49:44.471844+00:00",
+          "quality": "last_selection_only_not_inflight_or_success"
+        },
+        {
+          "role": "worker_historical",
+          "selection": [
+            {
+              "provider": "ais-2dsglm",
+              "model": "deepseek-flash",
+              "reasoningEffort": null
+            }
+          ],
+          "metadataMtime": "2026-11-08T17:48:12.355741+00:00",
+          "quality": "last_selection_only_not_inflight_or_success"
+        },
+        {
+          "role": "worker_historical",
+          "selection": [
+            {
+              "provider": "opencode-go",
+              "model": "deepseek-v4.1-flash",
+              "reasoningEffort": null
+            }
+          ],
+          "metadataMtime": "2026-11-12T06:06:19.348607+00:00",
+          "quality": "last_selection_only_not_inflight_or_success"
+        },
+        {
+          "role": "worker_historical",
+          "selection": [
+            {
+              "provider": "ais-2dsglm",
+              "model": "deepseek-flash",
+              "reasoningEffort": null
+            }
+          ],
+          "metadataMtime": "2026-11-09T03:24:21.562150+00:00",
+          "quality": "last_selection_only_not_inflight_or_success"
+        },
+        {
+          "role": "worker_historical",
+          "selection": [
+            {
+              "provider": "ais-2dsglm",
+              "model": "deepseek-flash",
+              "reasoningEffort": null
+            }
+          ],
+          "metadataMtime": "2026-11-11T18:22:26.296244+00:00",
+          "quality": "last_selection_only_not_inflight_or_success"
+        },
+        {
+          "role": "worker_historical",
+          "selection": [
+            {
+              "provider": "ais-2dsglm",
+              "model": "deepseek-flash",
+              "reasoningEffort": null
+            }
+          ],
+          "metadataMtime": "2026-11-06T09:34:18.905263+00:00",
+          "quality": "last_selection_only_not_inflight_or_success"
+        },
+        {
+          "role": "worker_historical",
+          "selection": [
+            {
+              "provider": "ais-2dsglm",
+              "model": "deepseek-flash",
+              "reasoningEffort": null
+            }
+          ],
+          "metadataMtime": "2026-11-10T14:12:55.895021+00:00",
+          "quality": "last_selection_only_not_inflight_or_success"
+        },
+        {
+          "role": "worker_historical",
+          "selection": [
+            {
+              "provider": "ais-2dsglm",
+              "model": "deepseek-flash",
+              "reasoningEffort": null
+            }
+          ],
+          "metadataMtime": "2026-11-10T07:15:31.344876+00:00",
+          "quality": "last_selection_only_not_inflight_or_success"
+        },
+        {
+          "role": "worker_historical",
+          "selection": [
+            {
+              "provider": "ais-2dsglm",
+              "model": "deepseek-flash",
+              "reasoningEffort": null
+            }
+          ],
+          "metadataMtime": "2026-11-10T14:21:24.001023+00:00",
+          "quality": "last_selection_only_not_inflight_or_success"
+        },
+        {
+          "role": "worker_historical",
+          "selection": [
+            {
+              "provider": "ais-2dsglm",
+              "model": "deepseek-flash",
+              "reasoningEffort": null
+            }
+          ],
+          "metadataMtime": "2026-11-09T14:26:31.500222+00:00",
+          "quality": "last_selection_only_not_inflight_or_success"
+        },
+        {
+          "role": "worker_historical",
+          "selection": [
+            {
+              "provider": "ais-2dsglm",
+              "model": "deepseek-flash",
+              "reasoningEffort": null
+            }
+          ],
+          "metadataMtime": "2026-11-08T17:42:03.426596+00:00",
+          "quality": "last_selection_only_not_inflight_or_success"
+        },
+        {
+          "role": "worker_historical",
+          "selection": [
+            {
+              "provider": "ais-2dsglm",
+              "model": "deepseek-flash",
+              "reasoningEffort": null
+            }
+          ],
+          "metadataMtime": "2026-11-11T04:13:06.442448+00:00",
+          "quality": "last_selection_only_not_inflight_or_success"
+        },
+        {
+          "role": "worker_open",
+          "selection": [
+            {
+              "provider": "ais-2dsglm",
+              "model": "deepseek-flash",
+              "reasoningEffort": null
+            }
+          ],
+          "metadataMtime": "2026-11-11T08:34:54.599138+00:00",
+          "quality": "last_selection_only_not_inflight_or_success"
+        },
+        {
+          "role": "worker_historical",
+          "selection": [
+            {
+              "provider": "ais-2dsglm",
+              "model": "deepseek-flash",
+              "reasoningEffort": null
+            }
+          ],
+          "metadataMtime": "2026-11-11T18:35:38.833305+00:00",
+          "quality": "last_selection_only_not_inflight_or_success"
+        },
+        {
+          "role": "worker_historical",
+          "selection": [
+            {
+              "provider": "ais-2dsglm",
+              "model": "deepseek-flash",
+              "reasoningEffort": null
+            }
+          ],
+          "metadataMtime": "2026-11-12T01:30:37.717200+00:00",
+          "quality": "last_selection_only_not_inflight_or_success"
+        },
+        {
+          "role": "worker_historical",
+          "selection": [
+            {
+              "provider": "ais-2dsglm",
+              "model": "deepseek-flash",
+              "reasoningEffort": null
+            }
+          ],
+          "metadataMtime": "2026-11-11T07:53:37.620012+00:00",
+          "quality": "last_selection_only_not_inflight_or_success"
+        },
+        {
+          "role": "worker_open",
+          "selection": [
+            {
+              "provider": "ais-2dsglm",
+              "model": "deepseek-flash",
+              "reasoningEffort": null
+            }
+          ],
+          "metadataMtime": "2026-11-12T06:06:19.039671+00:00",
+          "quality": "last_selection_only_not_inflight_or_success"
+        },
+        {
+          "role": "worker_historical",
+          "selection": [
+            {
+              "provider": "ais-2dsglm",
+              "model": "deepseek-flash",
+              "reasoningEffort": null
+            }
+          ],
+          "metadataMtime": "2026-11-10T08:36:06.128149+00:00",
+          "quality": "last_selection_only_not_inflight_or_success"
+        },
+        {
+          "role": "worker_historical",
+          "selection": [
+            {
+              "provider": "ais-2dsglm",
+              "model": "deepseek-flash",
+              "reasoningEffort": null
+            }
+          ],
+          "metadataMtime": "2026-11-11T10:15:58.865048+00:00",
+          "quality": "last_selection_only_not_inflight_or_success"
+        },
+        {
+          "role": "worker_historical",
+          "selection": [
+            {
+              "provider": "ais-2dsglm",
+              "model": "deepseek-flash",
+              "reasoningEffort": null
+            }
+          ],
+          "metadataMtime": "2026-11-12T04:38:38.952078+00:00",
+          "quality": "last_selection_only_not_inflight_or_success"
+        },
+        {
+          "role": "worker_historical",
+          "selection": [
+            {
+              "provider": "ais-2dsglm",
+              "model": "deepseek-flash",
+              "reasoningEffort": null
+            }
+          ],
+          "metadataMtime": "2026-11-08T08:57:08.251874+00:00",
+          "quality": "last_selection_only_not_inflight_or_success"
+        },
+        {
+          "role": "worker_historical",
+          "selection": [
+            {
+              "provider": "ais-2dsglm",
+              "model": "deepseek-flash",
+              "reasoningEffort": null
+            }
+          ],
+          "metadataMtime": "2026-11-11T16:07:36.536264+00:00",
+          "quality": "last_selection_only_not_inflight_or_success"
+        },
+        {
+          "role": "worker_historical",
+          "selection": [
+            {
+              "provider": "ais-2dsglm",
+              "model": "deepseek-flash",
+              "reasoningEffort": null
+            }
+          ],
+          "metadataMtime": "2026-11-09T10:01:47.722754+00:00",
+          "quality": "last_selection_only_not_inflight_or_success"
+        },
+        {
+          "role": "worker_historical",
+          "selection": [
+            {
+              "provider": "ais-2dsglm",
+              "model": "deepseek-flash",
+              "reasoningEffort": null
+            }
+          ],
+          "metadataMtime": "2026-11-08T08:31:08.391783+00:00",
+          "quality": "last_selection_only_not_inflight_or_success"
+        },
+        {
+          "role": "worker_historical",
+          "selection": [
+            {
+              "provider": "ais-2dsglm",
+              "model": "deepseek-flash",
+              "reasoningEffort": null
+            }
+          ],
+          "metadataMtime": "2026-11-09T03:18:41.669756+00:00",
+          "quality": "last_selection_only_not_inflight_or_success"
+        },
+        {
+          "role": "worker_historical",
+          "selection": [
+            {
+              "provider": "ais-2dsglm",
+              "model": "deepseek-flash",
+              "reasoningEffort": null
+            }
+          ],
+          "metadataMtime": "2026-11-10T09:04:09.111884+00:00",
+          "quality": "last_selection_only_not_inflight_or_success"
+        },
+        {
+          "role": "worker_historical",
+          "selection": [
+            {
+              "provider": "ais-2dsglm",
+              "model": "deepseek-flash",
+              "reasoningEffort": null
+            }
+          ],
+          "metadataMtime": "2026-11-11T08:01:37.232537+00:00",
+          "quality": "last_selection_only_not_inflight_or_success"
+        },
+        {
+          "role": "worker_historical",
+          "selection": [
+            {
+              "provider": "ais-2dsglm",
+              "model": "deepseek-flash",
+              "reasoningEffort": null
+            }
+          ],
+          "metadataMtime": "2026-11-12T03:55:11.706789+00:00",
+          "quality": "last_selection_only_not_inflight_or_success"
+        },
+        {
+          "role": "worker_historical",
+          "selection": [
+            {
+              "provider": "ais-2dsglm",
+              "model": "deepseek-flash",
+              "reasoningEffort": null
+            }
+          ],
+          "metadataMtime": "2026-11-11T07:43:12.580658+00:00",
+          "quality": "last_selection_only_not_inflight_or_success"
+        },
+        {
+          "role": "worker_historical",
+          "selection": [
+            {
+              "provider": "ais-2dsglm",
+              "model": "deepseek-flash",
+              "reasoningEffort": null
+            }
+          ],
+          "metadataMtime": "2026-11-12T04:37:52.710812+00:00",
+          "quality": "last_selection_only_not_inflight_or_success"
+        },
+        {
+          "role": "worker_historical",
+          "selection": [
+            {
+              "provider": "ais-2dsglm",
+              "model": "deepseek-flash",
+              "reasoningEffort": null
+            }
+          ],
+          "metadataMtime": "2026-11-09T12:02:50.921799+00:00",
+          "quality": "last_selection_only_not_inflight_or_success"
+        },
+        {
+          "role": "worker_historical",
+          "selection": [
+            {
+              "provider": "ais-2dsglm",
+              "model": "deepseek-flash",
+              "reasoningEffort": null
+            }
+          ],
+          "metadataMtime": "2026-11-12T04:38:42.623197+00:00",
+          "quality": "last_selection_only_not_inflight_or_success"
+        },
+        {
+          "role": "worker_historical",
+          "selection": [
+            {
+              "provider": "ais-2dsglm",
+              "model": "deepseek-flash",
+              "reasoningEffort": null
+            }
+          ],
+          "metadataMtime": "2026-11-12T00:49:42.726454+00:00",
+          "quality": "last_selection_only_not_inflight_or_success"
+        },
+        {
+          "role": "worker_historical",
+          "selection": [
+            {
+              "provider": "ais-2dsglm",
+              "model": "deepseek-flash",
+              "reasoningEffort": null
+            }
+          ],
+          "metadataMtime": "2026-11-09T10:40:34.944883+00:00",
+          "quality": "last_selection_only_not_inflight_or_success"
+        },
+        {
+          "role": "worker_historical",
+          "selection": [
+            {
+              "provider": "ais-2dsglm",
+              "model": "deepseek-flash",
+              "reasoningEffort": null
+            }
+          ],
+          "metadataMtime": "2026-11-12T04:08:04.013088+00:00",
+          "quality": "last_selection_only_not_inflight_or_success"
+        }
+      ]
+    },
+    {
+      "port": 3083,
+      "httpStatus": 200,
+      "health": "reachable",
+      "componentStates": {
+        "runtime": "ready",
+        "relay": "ready",
+        "notice": "ready",
+        "launch": "ready",
+        "delivery": "ready",
+        "assessment": "ready",
+        "reply": "ready",
+        "evals": "ready",
+        "models": "ready",
+        "github": "paused",
+        "feishu": "paused",
+        "history": "paused"
+      },
+      "errorComponents": [],
+      "paused": false,
+      "loopLiveness": "unverified",
+      "openTickets": 0,
+      "openObserved": 0,
+      "openStages": {},
+      "humanItemsObserved": 0,
+      "humanActionCounts": {},
+      "todayCompletedTicketsObserved": 0,
+      "todayEndedOutcomes": {},
+      "todayActiveSessions": null,
+      "todayActiveSessionsReason": "execution event feed not read; ticket updates and creation are not execution evidence",
+      "openPagination": {
+        "complete": true,
+        "total": 0,
+        "consistency": "nontransactional"
+      },
+      "endedPagination": {
+        "complete": true,
+        "total": 3,
+        "consistency": "nontransactional"
+      },
+      "recapAvailability": {
+        "openWithSummary": 0,
+        "summaryTimestampInList": "not_proven",
+        "summaryTextExported": false,
+        "fallback": "暂无可用的可追溯摘要"
+      },
+      "models": [
+        {
+          "role": "master",
+          "selection": [
+            {
+              "provider": "deepseek-official",
+              "model": "deepseek-flash",
+              "reasoningEffort": "high"
+            }
+          ],
+          "metadataMtime": "2026-11-05T11:10:08.974499+00:00",
+          "quality": "last_selection_only_not_inflight_or_success"
+        },
+        {
+          "role": "master",
+          "selection": [
+            {
+              "provider": "deepseek-official",
+              "model": "deepseek-flash",
+              "reasoningEffort": "high"
+            }
+          ],
+          "metadataMtime": "2026-11-12T05:41:22.002171+00:00",
+          "quality": "last_selection_only_not_inflight_or_success"
+        },
+        {
+          "role": "worker_historical",
+          "selection": [
+            {
+              "provider": "ais-2dsglm",
+              "model": "deepseek-flash",
+              "reasoningEffort": null
+            }
+          ],
+          "metadataMtime": "2026-11-05T11:48:40.223266+00:00",
+          "quality": "last_selection_only_not_inflight_or_success"
+        },
+        {
+          "role": "worker_historical",
+          "selection": [],
+          "metadataMtime": "2026-11-05T06:49:37.141189+00:00",
+          "quality": "unknown_selection"
+        },
+        {
+          "role": "worker_historical",
+          "selection": [
+            {
+              "provider": "ais-2dsglm",
+              "model": "deepseek-flash",
+              "reasoningEffort": null
+            }
+          ],
+          "metadataMtime": "2026-11-05T09:50:04.481998+00:00",
+          "quality": "last_selection_only_not_inflight_or_success"
+        }
+      ]
+    }
+  ],
+  "sessionDirectoryCounts": {
+    "all": 1385,
+    "session": 406,
+    "worker": 38,
+    "other": 941
+  },
+  "dashboard": [
+    {
+      "port": 3080,
+      "status": 401,
+      "error": "authorization",
+      "lastScanAt": null,
+      "scanning": null,
+      "scanErrorCount": null,
+      "tokens": null,
+      "cost": null
+    },
+    {
+      "port": 3083,
+      "status": 401,
+      "error": "authorization",
+      "lastScanAt": null,
+      "scanning": null,
+      "scanErrorCount": null,
+      "tokens": null,
+      "cost": null
+    }
+  ],
+  "modelEvidence": "metadata lastUsed only; no request/response success claims",
+  "privacy": "no raw session history, ticket title, summary text, recipients, credentials or chat ids exported",
+  "snapshotConsistency": "separate GET requests, no atomic revision guarantee"
+}

@@ -1,0 +1,36 @@
+{
+  "schema_version": "1.0",
+  "contract_name": "superagent-health-implementation",
+  "objective_guard": "按已定稿方案实现健康定期报告；只有核实既有管理人绑定后启用发送，不改变业务裁决状态，不修改宿主或活动profile，不输出凭据",
+  "deliverables": [
+    {
+      "id": "implementation",
+      "kind": "code",
+      "path_pattern": "tools/superagent_health/**",
+      "format": "Python/PowerShell/JSON",
+      "required": true,
+      "acceptance": [
+        "只读状态与工单、今日执行会话、实际模型观测、可追溯recap、未完成及人工事项",
+        "可选dashboard用量明确覆盖/认证/新鲜度降级",
+        "可靠outbox、去重重试、安静时段、定时报告及故障恢复",
+        "必要测试和真实dry-run通过",
+        "核实渠道绑定后验证真实送达并启用守护定时执行；不可核实则清楚记录所需人工动作"
+      ]
+    },
+    {
+      "id": "operations",
+      "kind": "document",
+      "path_pattern": "docs/ops/superagent-health*.md",
+      "format": "Markdown",
+      "required": true,
+      "acceptance": [
+        "一键运行、部署、禁用、回滚、跨设备配置说明",
+        "只保留脱敏验收证据，运行摘要和历史不进Git"
+      ]
+    }
+  ],
+  "worker_output": {
+    "format": "JSON",
+    "schema": "C:/Users/wwm_1/.agents/skills/ptc-multi-agent-control/assets/worker-receipt.schema.json"
+  }
+}

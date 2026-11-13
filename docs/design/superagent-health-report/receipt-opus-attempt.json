@@ -1,0 +1,19 @@
+{
+  "schema_version": "1.0",
+  "receipt_id": "controller-quarantined-opus-attempt-001",
+  "task_id": "health-db09dbce-8aef-4c35-acd6-d479d3270c3c",
+  "subtask_id": "challenge-opus5",
+  "route": "design-opus55",
+  "executor": "subagent_claude_opus5_plan",
+  "model": "unverified",
+  "outcome": "partial",
+  "summary": "专用Opus工具挑战返回但自报Claude3.5 Opus无证据；不作为指定模型验收，已显式路由重审。",
+  "files_changed": [],
+  "validation": [
+    "收到8项挑战但原model自述不可信",
+    "对sessions无日期过滤及跨日不能重复出现的建议已核查为不正确，不采纳"
+  ],
+  "risks": [
+    "专用工具真实provider/model无法验证"
+  ]
+}

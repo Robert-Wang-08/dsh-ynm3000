@@ -1,0 +1,21 @@
+{
+  "schema": "design-receipt/v1",
+  "ticket": "da9baec1170cd5b78589165bb3ae8d56",
+  "stage": "astra-design",
+  "model": "gpt-6-astra",
+  "route": "codex-relay /v1/chat/completions",
+  "prompt_file": "C:\\Users\\wwm_1\\.dsh\\state\\superagent\\work\\session-aggregation-design-da9baec1170c\\prompts\\design-6astra.md",
+  "prompt_sha256": "15255757e100ad00f7f7e6187c8d244eba5e33564f1a82d3df10e39a7af395ec",
+  "output_file": "C:\\Users\\wwm_1\\.dsh\\state\\superagent\\work\\session-aggregation-design-da9baec1170c\\outputs\\astra-design-v0.1.md",
+  "output_sha256": "e1412ed3dc5e95b4fe27a3d5ee91cf1dc665b699dc43dfb5b1741e2e82b00445",
+  "output_bytes": 23308,
+  "usage": {
+    "prompt_tokens": 2253,
+    "completion_tokens": 6476,
+    "total_tokens": 8729
+  },
+  "generated_at": "2026-11-12T22:06:52+08:00",
+  "status": "captured",
+  "verification": "non-empty output captured; model id is the caller-configured route, not independently attested by the provider",
+  "notes": "主设计稿；6astra 自述未完成 opus/kimi 评审，评审由后续独立调用完成"
+}

@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>unified-focus-hub · Spec Track Map</title>
+<style>
+:root {
+  --color-done: #22c55e;
+  --color-active: #3b82f6;
+  --color-pending: #e5e7eb;
+  --color-skipped: #f3f4f6;
+  --color-blocked: #ef4444;
+  --color-gate-open: #22c55e;
+  --color-gate-blocked: #f59e0b;
+  --color-line: #64748b;
+  --color-bg: #f8fafc;
+  --color-line-pending: #cbd5e1;
+  --color-surface-subtle: #f1f5f9;
+  --color-heat-lo: #dcfce7;
+  --color-heat-hi: #22c55e;
+  --color-heat-text: #14532d;
+  --color-trend-up: #22c55e;
+  --color-trend-flat: #9ca3af;
+  --color-trend-stalled: #f59e0b;
+  --color-milestone: #64748b;
+  --color-milestone-overdue: #ef4444;
+  --color-alert-critical: #ef4444;
+  --color-priority-high: #ef4444;
+  --color-priority-medium: #f59e0b;
+  --color-priority-low: #9ca3af;
+  --font-stack: -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0; padding: 24px;
+  background: var(--color-bg); color: #1e293b;
+  font-family: var(--font-stack); font-size: 14px;
+}
+header.page { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; }
+header.page h1 { font-size: 20px; margin: 0; }
+.snapshot { color: #64748b; font-size: 12px; }
+.stats-bar {
+  margin: 16px 0 8px; padding: 10px 14px;
+  background: #fff; border: 1px solid #e2e8f0; border-radius: 8px;
+  font-size: 13px;
+}
+.stats-bar b { font-weight: 600; }
+.filter-note { color: #94a3b8; font-size: 12px; margin: 4px 0 12px; }
+.board { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 16px; }
+.col-header { padding-left: 210px; overflow-x: auto; }
+.track-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 0; border-top: 1px solid var(--color-surface-subtle);
+}
+.row-head { width: 210px; flex: none; }
+.row-head .priority { font-size: 12px; margin-right: 4px; }
+.row-head .fname { font-weight: 600; display: block; margin-top: 2px; }
+.row-head .fname a { color: inherit; text-decoration: none; }
+.row-head .fname a:hover { text-decoration: underline; }
+.row-head .ftitle { color: #64748b; font-size: 12px; display: block; }
+.badges { margin-top: 4px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.gate-badge {
+  font-size: 11px; padding: 1px 8px; border-radius: 999px; color: #fff;
+}
+.gate-badge.open { background: var(--color-gate-open); }
+.gate-badge.blocked { background: var(--color-gate-blocked); }
+.cover-badge {
+  font-size: 11px; font-weight: 600; color: #475569; white-space: nowrap;
+}
+.milestone { font-size: 12px; font-weight: 600; }
+.alert-badge { font-size: 11px; font-weight: 700; white-space: nowrap; }
+.alert-badge.critical { color: var(--color-alert-critical); }
+.alert-badge.prominent { border: 1px solid currentColor; border-radius: 999px;
+  padding: 1px 7px; }
+.row-track { flex: 1; overflow-x: auto; }
+.row-tail { width: 150px; flex: none; text-align: right; font-size: 13px; }
+.row-tail .progress { font-weight: 700; margin-right: 8px; }
+.trend { font-size: 12px; white-space: nowrap; }
+.empty { color: #94a3b8; padding: 24px; text-align: center; }
+footer.legend {
+  margin-top: 16px; color: #64748b; font-size: 12px; line-height: 1.8;
+}
+@media (max-width: 800px) {
+  body { padding: 12px; }
+  .col-header { display: none; }
+  .track-row { flex-direction: column; align-items: stretch; }
+  .row-head, .row-tail { width: auto; text-align: left; }
+}
+
+
+.badges-lg { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 8px 0; }
+.badges-lg .progress-badge { font-weight: 700; }
+.badges-lg .cover-badge {
+  font-size: 12px; font-weight: 600; color: #475569; white-space: nowrap;
+}
+.goal-box {
+  background: #fff; border: 1px solid #e2e8f0; border-radius: 8px;
+  padding: 12px 16px; margin: 14px 0;
+}
+.goal-box .goal { font-size: 14px; margin: 0 0 4px; }
+.goal-box .spec-ref { color: #64748b; font-size: 12px; }
+.track-box {
+  background: #fff; border: 1px solid #e2e8f0; border-radius: 8px;
+  padding: 16px; margin: 14px 0; overflow-x: auto;
+}
+.gate-panel {
+  background: #fff; border: 1px solid #e2e8f0; border-radius: 8px;
+  padding: 12px 16px; margin: 14px 0;
+}
+.gate-panel h2 { font-size: 14px; margin: 0 0 6px; }
+.gate-panel.blocked { border-left: 4px solid var(--color-gate-blocked); }
+.gate-panel.open { border-left: 4px solid var(--color-gate-open); }
+.gate-panel ul, .activity ul { margin: 6px 0 0; padding-left: 20px; line-height: 1.9; }
+.gate-panel .blk { color: var(--color-gate-blocked); }
+.activity {
+  background: #fff; border: 1px solid #e2e8f0; border-radius: 8px;
+  padding: 12px 16px; margin: 14px 0;
+}
+.activity h2 { font-size: 14px; margin: 0; }
+.activity .ts { color: #94a3b8; font-size: 12px; margin-right: 6px; }
+.activity .actor { color: #94a3b8; font-size: 12px; }
+code {
+  background: var(--color-surface-subtle); padding: 0 5px; border-radius: 4px; font-size: 12px;
+}
+
+</style>
+</head>
+<body>
+<header class="page">
+  <h1>unified-focus-hub · [focus-hub] 任务轨道（只读导出）</h1>
+  <span class="snapshot">快照: 2026-11-04T15:17:01+08:00</span>
+</header>
+<div class="badges-lg"><span class="progress-badge">0% (0/6)</span><span class="gate-badge blocked">🔒 Gate BLOCKED</span></div>
+
+<div class="track-box"><svg class="feat-track" width="610" height="130" viewBox="0 0 610 130" role="img"><line x1="46" y1="46" x2="124" y2="46" stroke="#3b82f6" stroke-width="2.5"/><line x1="156" y1="46" x2="234" y2="46" stroke="#3b82f6" stroke-width="2.5"/><line x1="266" y1="46" x2="344" y2="46" stroke="#3b82f6" stroke-width="2.5"/><line x1="376" y1="46" x2="454" y2="46" stroke="#3b82f6" stroke-width="2.5"/><line x1="486" y1="46" x2="564" y2="46" stroke="#3b82f6" stroke-width="2.5"/><g tabindex="0"><title>lane_pending 待开始
+状态: active
+artifact: —
+note: 9 项</title><circle cx="30" cy="46" r="14" fill="#3b82f6" stroke="#2563eb" stroke-width="2"/><circle cx="30" cy="46" r="3.5" fill="#ffffff"/></g><text x="30" y="78" text-anchor="middle" font-size="12" fill="#475569">待开始</text><text x="30" y="93" text-anchor="middle" font-size="10" fill="#94a3b8">active</text><g tabindex="0"><title>lane_active 进行中
+状态: active
+artifact: —
+note: 1 项</title><circle cx="140" cy="46" r="14" fill="#3b82f6" stroke="#2563eb" stroke-width="2"/><circle cx="140" cy="46" r="3.5" fill="#ffffff"/></g><text x="140" y="78" text-anchor="middle" font-size="12" fill="#475569">进行中</text><text x="140" y="93" text-anchor="middle" font-size="10" fill="#94a3b8">active</text><g tabindex="0"><title>lane_review 待验收
+状态: active
+artifact: —
+note: 4 项</title><circle cx="250" cy="46" r="14" fill="#3b82f6" stroke="#2563eb" stroke-width="2"/><circle cx="250" cy="46" r="3.5" fill="#ffffff"/></g><text x="250" y="78" text-anchor="middle" font-size="12" fill="#475569">待验收</text><text x="250" y="93" text-anchor="middle" font-size="10" fill="#94a3b8">active</text><g tabindex="0"><title>lane_done 已完成
+状态: active
+artifact: —
+note: 2 项</title><circle cx="360" cy="46" r="14" fill="#3b82f6" stroke="#2563eb" stroke-width="2"/><circle cx="360" cy="46" r="3.5" fill="#ffffff"/></g><text x="360" y="78" text-anchor="middle" font-size="12" fill="#475569">已完成</text><text x="360" y="93" text-anchor="middle" font-size="10" fill="#94a3b8">active</text><g tabindex="0"><title>lane_parked 暂挂
+状态: active
+artifact: —
+note: 1 项</title><circle cx="470" cy="46" r="14" fill="#3b82f6" stroke="#2563eb" stroke-width="2"/><circle cx="470" cy="46" r="3.5" fill="#ffffff"/></g><text x="470" y="78" text-anchor="middle" font-size="12" fill="#475569">暂挂</text><text x="470" y="93" text-anchor="middle" font-size="10" fill="#94a3b8">active</text><g tabindex="0"><title>lane_unknown 未分类
+状态: pending
+artifact: —
+note: 0 项</title><circle cx="580" cy="46" r="14" fill="#ffffff" stroke="#9ca3af" stroke-width="2"/></g><text x="580" y="78" text-anchor="middle" font-size="12" fill="#475569">未分类</text><text x="580" y="93" text-anchor="middle" font-size="10" fill="#94a3b8">pending</text></svg></div>
+
+<section class="gate-panel blocked">
+  <h2>Gate 门禁：s1-s5 全部 done/skipped 方可进入实现</h2>
+  <p class="gate-state">🔒 Gate BLOCKED — 4 个五图 Stage 未完成</p>
+  <ul><li>🔵 lane_pending 待开始 <code>active</code> <b class="blk">← 阻塞</b></li><li>🔵 lane_active 进行中 <code>active</code> <b class="blk">← 阻塞</b></li><li>🔵 lane_review 待验收 <code>active</code> <b class="blk">← 阻塞</b></li><li>🔵 lane_done 已完成 <code>active</code> <b class="blk">← 阻塞</b></li></ul>
+</section>
+<section class="work-items"><style>.work-items table{width:100%;border-collapse:collapse;font-size:13px}.work-items th,.work-items td{border-bottom:1px solid #e2e8f0;padding:6px 8px;text-align:left;vertical-align:top}.work-items code{font-size:11px;opacity:.65}.work-items .s-done{color:#16a34a}.work-items .s-active{color:#2563eb}.work-items .wl{white-space:nowrap;opacity:.75}</style><h2>任务清单（17）</h2><table><thead><tr><th>泳道</th><th>任务</th><th>状态</th><th>归属</th></tr></thead><tbody><tr><td class="wl">待开始</td><td class="wt">关联会话并能继续上次工作<br><code>focus-hub:FH-05</code></td><td class="ws s-pending">pending </td><td class="wm">原状 pending</td></tr><tr><td class="wl">待开始</td><td class="wt">把讨论编成可追溯的话题<br><code>focus-hub:FH-06</code></td><td class="ws s-pending">pending </td><td class="wm">原状 pending</td></tr><tr><td class="wl">待开始</td><td class="wt">跨时间与设备验收<br><code>focus-hub:FH-08</code></td><td class="ws s-pending">pending </td><td class="wm">原状 pending</td></tr><tr><td class="wl">待开始</td><td class="wt">提炼模型与 Agent 准入配置<br><code>focus-hub:PARK-01-active</code></td><td class="ws s-pending">pending </td><td class="wm">原状 pending</td></tr><tr><td class="wl">待开始</td><td class="wt">主控执行 FH-03 的 Chrome 点通验收：开页→查看建议→勾 w1→点『还要保留下一次安排』→细化→确认新增 w4 与调整说明→取消勾选 w4 触发 s<br><code>focus-hub:FH-03.1</code></td><td class="ws s-pending">pending </td><td class="wm">原状 pending</td></tr><tr><td class="wl">待开始</td><td class="wt">NCBS 数据标准治理：对照裁定登记核验词根统一<br><code>focus-hub:NCBS-01</code></td><td class="ws s-pending">pending </td><td class="wm">原状 pending</td></tr><tr><td class="wl">待开始</td><td class="wt">SkillHub 工作台：云同步与 payload 模式治理<br><code>focus-hub:SKILLHUB-01</code></td><td class="ws s-pending">pending </td><td class="wm">原状 pending</td></tr><tr><td class="wl">待开始</td><td class="wt">DSH 治理：功能边界、插件装配与路由验证<br><code>focus-hub:DSH-01</code></td><td class="ws s-pending">pending </td><td class="wm">原状 pending</td></tr><tr><td class="wl">待开始</td><td class="wt">请用户对「还款与分期」本体 v0.1 的 8 条零证据功能点逐条裁定（保留/改名<br><code>focus-hub:T-MVULGK12</code></td><td class="ws s-pending">pending </td><td class="wm">原状 pending</td></tr><tr><td class="wl">进行中</td><td class="wt">约定唯一事实与同步规则<br><code>focus-hub:FH-03</code></td><td class="ws s-active">active </td><td class="wm">原状 active</td></tr><tr><td class="wl">待验收</td><td class="wt">说清项目目标与边界<br><code>focus-hub:FH-01</code></td><td class="ws s-pending">pending ⏸ 等人</td><td class="wm">原状 review</td></tr><tr><td class="wl">待验收</td><td class="wt">澄清工作台需求<br><code>focus-hub:FH-01.1</code></td><td class="ws s-pending">pending ⏸ 等人</td><td class="wm">原状 review</td></tr><tr><td class="wl">待验收</td><td class="wt">确定工作台交互与布局<br><code>focus-hub:FH-02</code></td><td class="ws s-pending">pending ⏸ 等人</td><td class="wm">原状 review</td></tr><tr><td class="wl">待验收</td><td class="wt">点验洞察使用闭环<br><code>focus-hub:FH-02.1</code></td><td class="ws s-pending">pending ⏸ 等人</td><td class="wm">原状 review</td></tr><tr><td class="wl">已完成</td><td class="wt">实现最小项目工作台<br><code>focus-hub:FH-04</code></td><td class="ws s-done">done </td><td class="wm">原状 done</td></tr><tr><td class="wl">已完成</td><td class="wt">接入日常工具入口<br><code>focus-hub:FH-07</code></td><td class="ws s-done">done </td><td class="wm">原状 done</td></tr><tr><td class="wl">暂挂</td><td class="wt">会话快捷切换优化<br><code>focus-hub:PARK-02</code></td><td class="ws s-pending">pending </td><td class="wm">原状 parked</td></tr></tbody></table></section>
+<section class="activity">
+  <h2>最近动态</h2>
+  <p class="empty">无历史记录 — 通过 <code>track_render.py set</code> 变更状态后自动记录</p>
+</section>
+<footer class="legend">
+  图例: ●✓ done · ● active · ○ pending · ⊘ skipped · ✕ blocked · ◆ Gate（绿=OPEN 琥珀=BLOCKED）
+  · 📎 有 artifact（md 站点点击直达渲染内容）· 虚线圈 = ad-hoc 临时站 · 悬停站点查看详情（Tab 可聚焦）<br>
+  数据: .scratch/unified-focus-hub/feature-track.json + history.jsonl
+  · 由 track_render.py html unified-focus-hub 生成
+</footer>
+</body>
+</html>

@@ -1,0 +1,38 @@
+{
+  "instances": [
+    {
+      "id": "superagent",
+      "url": "http://127.0.0.1:3082"
+    },
+    {
+      "id": "sa-local",
+      "url": "http://127.0.0.1:3083"
+    }
+  ],
+  "dashboard_urls": [
+    "http://127.0.0.1:3083"
+  ],
+  "schedule_hours": [
+    9,
+    11,
+    13,
+    15,
+    17,
+    19
+  ],
+  "daily_time": "21:05",
+  "quiet_hours": [
+    22,
+    8
+  ],
+  "interval_seconds": 60,
+  "delivery": {
+    "enabled": false,
+    "identity": "bot",
+    "recipient_env": "DSH_HEALTH_CHAT_ID",
+    "cli_env": "DSH_HEALTH_LARK_CLI",
+    "config_dir_env": "DSH_HEALTH_LARK_CONFIG_DIR",
+    "binding_confirmed": false,
+    "content_policy": "redacted_health_report_v1"
+  }
+}

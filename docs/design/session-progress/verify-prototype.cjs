@@ -1,0 +1,14 @@
+const fs = require("node:fs");
+const vm = require("node:vm");
+const path = require("node:path");
+const base = __dirname;
+const html = fs.readFileSync(path.join(base,"prototype.html"),"utf8");
+new vm.Script(html.split("<script>")[1].split("</script>")[0]);
+const dom = fs.readFileSync(path.join(base,"test-dom.html"),"utf8");
+const body = dom.match(/<body[^>]*>/)[0];
+const text = dom.match(/<pre id="test-result"[^>]*>([\s\S]*?)<\/pre>/)?.[1] || "";
+console.log(body);
+console.log(text);
+if (!body.includes("data-selftest=\"passed\"")) throw Error("Chrome selftest did not pass");
+if (/<script[^>]+src=|<link[^>]+href=|fetch\(|WebSocket\(|localStorage\./.test(html)) throw Error("Unexpected external resource or persistence");
+console.log("PASS offline source boundaries; inline script syntax; bytes="+Buffer.byteLength(html));

@@ -1,0 +1,656 @@
+{
+  "version": "1.0.0",
+  "meta": {
+    "name": "Focus Hub v2 · 演示任务树",
+    "kind": "illustrative",
+    "warning": "所有状态为演示数据，不代表真实项目进度",
+    "integration": {
+      "source": "task_focus_hub_v2_package.zip",
+      "kind": "illustrative-stress-case",
+      "addedDependencies": [
+        "T111>T221",
+        "T123>T232"
+      ],
+      "sharedReference": "W21 references T111",
+      "note": "新增关系与验收门均为合成压力案例，不是实际业务推断"
+    }
+  },
+  "projects": [
+    {
+      "id": "P01",
+      "title": "AgentOps 统一任务总控",
+      "role": "goal",
+      "stage": 2,
+      "status": "active",
+      "attention": "active",
+      "next": "确定默认视图和进度口径",
+      "summary": "把多个工具、会话和 Agent 的结果统一聚合为任务中心的可观察状态",
+      "children": [
+        {
+          "id": "W11",
+          "title": "总控视图与交互",
+          "role": "capability",
+          "stage": 2,
+          "status": "active",
+          "attention": "active",
+          "next": "完成三层视图可用性验证",
+          "summary": "从单个 L1 目标下钻到其 L2 节点，再从单个 L2 节点下钻到其 L3 子项，可反向返回",
+          "children": [
+            {
+              "id": "T111",
+              "title": "轨道图与里程碑",
+              "role": "technical-goal",
+              "stage": 3,
+              "status": "review",
+              "attention": "focus",
+              "next": "确认 Station 与共享门禁的验收口径",
+              "summary": "无交叉轨道展示阶段推进、阻塞与分支汇合",
+              "children": [],
+              "decision": "轨道默认按能力分组；状态不决定轨道颜色",
+              "evidence": "演示数据：待绑定实际证据",
+              "updated": "示例 · 未连接会话日志",
+              "owner": "待分配"
+            },
+            {
+              "id": "T112",
+              "title": "DAG 依赖投影",
+              "role": "task",
+              "stage": 2,
+              "status": "active",
+              "attention": "focus",
+              "next": "实现按需展开的依赖图",
+              "summary": "归属树和依赖边分别建模",
+              "children": [],
+              "decision": "",
+              "evidence": "演示数据：待绑定实际证据",
+              "updated": "示例 · 未连接会话日志",
+              "owner": "待分配",
+              "dependsOn": [
+                "T111"
+              ]
+            },
+            {
+              "id": "T113",
+              "title": "Focus / Resume 抽屉",
+              "role": "task",
+              "stage": 1,
+              "status": "ready",
+              "attention": "parked",
+              "next": "补足恢复成本与已决策摘要",
+              "summary": "连续工作聚焦，恢复时不重读全部会话",
+              "children": [],
+              "decision": "",
+              "evidence": "演示数据：待绑定实际证据",
+              "updated": "示例 · 未连接会话日志",
+              "owner": "待分配",
+              "dependsOn": [
+                "T111"
+              ]
+            }
+          ],
+          "decision": "主界面以轨道图为主，DAG 按需切换",
+          "evidence": "演示数据：待绑定实际证据",
+          "updated": "示例 · 未连接会话日志",
+          "owner": "待分配",
+          "acceptance": {
+            "requires": [
+              "T111",
+              "T112"
+            ],
+            "accepted": false,
+            "origin": "self-report",
+            "revision": "demo-r1",
+            "targetRevision": "demo-r1",
+            "evidence": "演示：尚无独立验收"
+          }
+        },
+        {
+          "id": "W12",
+          "title": "任务结构与证据",
+          "role": "capability",
+          "stage": 2,
+          "status": "blocked",
+          "attention": "focus",
+          "next": "确定状态事件与验收证据 schema",
+          "summary": "统一任务身份、状态、进度门禁与来源锚点",
+          "children": [
+            {
+              "id": "T121",
+              "title": "任务/事件/决策类型识别",
+              "role": "task",
+              "stage": 2,
+              "status": "active",
+              "attention": "focus",
+              "next": "先明确候选任务的晋升规则",
+              "summary": "避免将技术讨论或偶然灵感误登记为一级目标",
+              "children": [],
+              "decision": "",
+              "evidence": "演示数据：待绑定实际证据",
+              "updated": "示例 · 未连接会话日志",
+              "owner": "待分配"
+            },
+            {
+              "id": "T122",
+              "title": "事件去重与冲突处理",
+              "role": "task",
+              "stage": 1,
+              "status": "blocked",
+              "attention": "focus",
+              "next": "补足稳定 task_id 与 event_id",
+              "summary": "不同会话同一进度事件不可重复计算",
+              "children": [],
+              "decision": "推断证据不允许自动覆盖人工确认状态",
+              "evidence": "演示数据：待绑定实际证据",
+              "updated": "示例 · 未连接会话日志",
+              "owner": "待分配",
+              "dependsOn": [
+                "T121"
+              ]
+            },
+            {
+              "id": "T123",
+              "title": "Station 验收证据校验",
+              "role": "technical-goal",
+              "stage": 0,
+              "status": "ready",
+              "attention": "parked",
+              "next": "定义 Gate check 的证据引用方式",
+              "summary": "Station 通过必须绑定可审查交付物",
+              "children": [],
+              "decision": "",
+              "evidence": "演示数据：待绑定实际证据",
+              "updated": "示例 · 未连接会话日志",
+              "owner": "待分配",
+              "dependsOn": [
+                "T122"
+              ]
+            }
+          ],
+          "decision": "仅明确证据或人工批准的状态变更可推进门禁",
+          "evidence": "演示数据：待绑定实际证据",
+          "updated": "示例 · 未连接会话日志",
+          "owner": "待分配",
+          "dependsOn": [
+            "W11"
+          ]
+        },
+        {
+          "id": "W13",
+          "title": "会话监控与日志采集",
+          "role": "capability",
+          "stage": 1,
+          "status": "ready",
+          "attention": "focus",
+          "next": "做 Skill 实时写入 + Watchdog 补漏实验",
+          "summary": "从任务日志提取增量变化而不重写原始意图",
+          "children": [
+            {
+              "id": "T131",
+              "title": "Skill 结束时写状态增量",
+              "role": "task",
+              "stage": 1,
+              "status": "ready",
+              "attention": "focus",
+              "next": "制定 progress-event 输出协议",
+              "summary": "每次执行结束追加可追溯事件",
+              "children": [],
+              "decision": "",
+              "evidence": "演示数据：待绑定实际证据",
+              "updated": "示例 · 未连接会话日志",
+              "owner": "待分配"
+            },
+            {
+              "id": "T132",
+              "title": "Watchdog 读取会话日志",
+              "role": "task",
+              "stage": 0,
+              "status": "ready",
+              "attention": "parked",
+              "next": "设计增量扫描游标与权限范围",
+              "summary": "被动收集未遵守 Skill 的会话输出",
+              "children": [],
+              "decision": "",
+              "evidence": "演示数据：待绑定实际证据",
+              "updated": "示例 · 未连接会话日志",
+              "owner": "待分配",
+              "dependsOn": [
+                "T131"
+              ]
+            },
+            {
+              "id": "T133",
+              "title": "冲突审阅队列",
+              "role": "task",
+              "stage": 0,
+              "status": "ready",
+              "attention": "parked",
+              "next": "定义高风险变更的人工确认门禁",
+              "summary": "只对冲突或重大目标变更发出提示",
+              "children": [],
+              "decision": "",
+              "evidence": "演示数据：待绑定实际证据",
+              "updated": "示例 · 未连接会话日志",
+              "owner": "待分配",
+              "dependsOn": [
+                "T132"
+              ]
+            }
+          ],
+          "decision": "",
+          "evidence": "演示数据：待绑定实际证据",
+          "updated": "示例 · 未连接会话日志",
+          "owner": "待分配",
+          "dependsOn": [
+            "W12"
+          ]
+        },
+        {
+          "id": "W14",
+          "title": "Agent 执行与恢复",
+          "role": "capability",
+          "stage": 3,
+          "status": "review",
+          "attention": "parked",
+          "next": "确定超时后如何识别结果已落盘",
+          "summary": "让 Agent 失败、超时、产出分开记录",
+          "children": [
+            {
+              "id": "T141",
+              "title": "Agent 超时后的结果对账",
+              "role": "task",
+              "stage": 3,
+              "status": "review",
+              "attention": "parked",
+              "next": "核对代码提交与 Agent 返回结果",
+              "summary": "超时不等于未交付",
+              "children": [],
+              "decision": "",
+              "evidence": "演示数据：待绑定实际证据",
+              "updated": "示例 · 未连接会话日志",
+              "owner": "待分配"
+            },
+            {
+              "id": "T142",
+              "title": "Next Action / Resume Capsule",
+              "role": "task",
+              "stage": 2,
+              "status": "active",
+              "attention": "parked",
+              "next": "完成恢复信息与状态事件映射",
+              "summary": "包含最近决策、阻塞和下一步最小动作",
+              "children": [],
+              "decision": "",
+              "evidence": "演示数据：待绑定实际证据",
+              "updated": "示例 · 未连接会话日志",
+              "owner": "待分配"
+            }
+          ],
+          "decision": "",
+          "evidence": "演示数据：待绑定实际证据",
+          "updated": "示例 · 未连接会话日志",
+          "owner": "待分配",
+          "dependsOn": [
+            "W13"
+          ]
+        }
+      ],
+      "decision": "当前示例聚焦进度总控，而非复杂的完整项目管理平台",
+      "evidence": "演示数据：待绑定实际证据",
+      "updated": "示例 · 未连接会话日志",
+      "owner": "待分配",
+      "acceptance": {
+        "requires": [
+          "W11",
+          "W12",
+          "W13"
+        ],
+        "accepted": false,
+        "origin": "self-report",
+        "revision": "demo-r1",
+        "targetRevision": "demo-r1",
+        "evidence": "演示：尚无独立验收"
+      }
+    },
+    {
+      "id": "P02",
+      "title": "RFP 应标响应自动化",
+      "role": "goal",
+      "stage": 2,
+      "status": "active",
+      "attention": "focus",
+      "next": "完成应标知识库与响应矩阵样版",
+      "summary": "将历史 RFP、模板和交付文档转为可验证的响应能力",
+      "children": [
+        {
+          "id": "W21",
+          "title": "应标知识基线",
+          "role": "capability",
+          "stage": 3,
+          "status": "review",
+          "attention": "focus",
+          "next": "确认通用条款的版本基线",
+          "summary": "将业务、NFR、交付、SLA 统一索引",
+          "children": [
+            {
+              "id": "T211",
+              "title": "历史 RFP 条款结构化",
+              "role": "task",
+              "stage": 3,
+              "status": "review",
+              "attention": "focus",
+              "next": "抽样复核条款聚类正确率",
+              "summary": "建立可引用需求条目",
+              "children": [],
+              "decision": "",
+              "evidence": "演示数据：待绑定实际证据",
+              "updated": "示例 · 未连接会话日志",
+              "owner": "待分配"
+            },
+            {
+              "id": "T212",
+              "title": "售前方案参考库",
+              "role": "task",
+              "stage": 2,
+              "status": "active",
+              "attention": "parked",
+              "next": "完善案例出处与适用条件",
+              "summary": "避免历史方案误用",
+              "children": [],
+              "decision": "",
+              "evidence": "演示数据：待绑定实际证据",
+              "updated": "示例 · 未连接会话日志",
+              "owner": "待分配"
+            }
+          ],
+          "decision": "",
+          "evidence": "演示数据：待绑定实际证据",
+          "updated": "示例 · 未连接会话日志",
+          "owner": "待分配",
+          "references": [
+            "T111"
+          ]
+        },
+        {
+          "id": "W22",
+          "title": "需求解析与响应矩阵",
+          "role": "capability",
+          "stage": 2,
+          "status": "active",
+          "attention": "focus",
+          "next": "将响应证据追溯到源条款",
+          "summary": "形成需求→标准答案→偏差→验证矩阵",
+          "children": [
+            {
+              "id": "T221",
+              "title": "需求分类与追溯",
+              "role": "task",
+              "stage": 2,
+              "status": "active",
+              "attention": "focus",
+              "next": "增加条款编号和页码引用",
+              "summary": "解析历史需求",
+              "children": [],
+              "decision": "",
+              "evidence": "演示数据：待绑定实际证据",
+              "updated": "示例 · 未连接会话日志",
+              "owner": "待分配",
+              "dependsOn": [
+                "T111"
+              ]
+            },
+            {
+              "id": "T222",
+              "title": "评分与差距识别",
+              "role": "technical-goal",
+              "stage": 1,
+              "status": "ready",
+              "attention": "parked",
+              "next": "定义评分门槛与偏差风险",
+              "summary": "识别缺失条款和风险",
+              "children": [],
+              "decision": "",
+              "evidence": "演示数据：待绑定实际证据",
+              "updated": "示例 · 未连接会话日志",
+              "owner": "待分配",
+              "dependsOn": [
+                "T221"
+              ]
+            }
+          ],
+          "decision": "",
+          "evidence": "演示数据：待绑定实际证据",
+          "updated": "示例 · 未连接会话日志",
+          "owner": "待分配"
+        },
+        {
+          "id": "W23",
+          "title": "PPT/文档生成与质检",
+          "role": "capability",
+          "stage": 1,
+          "status": "ready",
+          "attention": "parked",
+          "next": "试运行完整闭环",
+          "summary": "从评分矩阵生成可审查交付物",
+          "children": [
+            {
+              "id": "T231",
+              "title": "模板化章节装配",
+              "role": "task",
+              "stage": 1,
+              "status": "ready",
+              "attention": "parked",
+              "next": "确认模板章节模型",
+              "summary": "按交付结构组织输出",
+              "children": [],
+              "decision": "",
+              "evidence": "演示数据：待绑定实际证据",
+              "updated": "示例 · 未连接会话日志",
+              "owner": "待分配"
+            },
+            {
+              "id": "T232",
+              "title": "审校与证据核验",
+              "role": "task",
+              "stage": 0,
+              "status": "ready",
+              "attention": "parked",
+              "next": "明确引用与幻觉检查",
+              "summary": "生成不等于可交付",
+              "children": [],
+              "decision": "",
+              "evidence": "演示数据：待绑定实际证据",
+              "updated": "示例 · 未连接会话日志",
+              "owner": "待分配",
+              "dependsOn": [
+                "T231",
+                "T123"
+              ]
+            }
+          ],
+          "decision": "",
+          "evidence": "演示数据：待绑定实际证据",
+          "updated": "示例 · 未连接会话日志",
+          "owner": "待分配"
+        }
+      ],
+      "decision": "",
+      "evidence": "演示数据：待绑定实际证据",
+      "updated": "示例 · 未连接会话日志",
+      "owner": "待分配"
+    },
+    {
+      "id": "P03",
+      "title": "SRS 自动生成",
+      "role": "goal",
+      "stage": 1,
+      "status": "ready",
+      "attention": "focus",
+      "next": "校验最小上游输入与目标模板",
+      "summary": "从代码、历史需求与接口资料抽取可追踪的软件需求",
+      "children": [
+        {
+          "id": "W31",
+          "title": "需求输入规范化",
+          "role": "capability",
+          "stage": 2,
+          "status": "active",
+          "attention": "focus",
+          "next": "确认代码与历史需求关联方式",
+          "summary": "整理代码、版本需求与接口资料",
+          "children": [
+            {
+              "id": "T311",
+              "title": "需求差异和溯源",
+              "role": "task",
+              "stage": 2,
+              "status": "active",
+              "attention": "focus",
+              "next": "关联方法、配置与需求条目",
+              "summary": "追踪新老版本差异",
+              "children": [],
+              "decision": "",
+              "evidence": "演示数据：待绑定实际证据",
+              "updated": "示例 · 未连接会话日志",
+              "owner": "待分配"
+            }
+          ],
+          "decision": "",
+          "evidence": "演示数据：待绑定实际证据",
+          "updated": "示例 · 未连接会话日志",
+          "owner": "待分配"
+        },
+        {
+          "id": "W32",
+          "title": "SRS 生成与审核",
+          "role": "capability",
+          "stage": 1,
+          "status": "ready",
+          "attention": "parked",
+          "next": "验证章节和证据要求",
+          "summary": "生成精简 SRS，人工处理不确定项",
+          "children": [
+            {
+              "id": "T321",
+              "title": "最小 SRS 结构",
+              "role": "task",
+              "stage": 1,
+              "status": "ready",
+              "attention": "parked",
+              "next": "锁定目标模板",
+              "summary": "范围、功能、接口和 NFR",
+              "children": [],
+              "decision": "",
+              "evidence": "演示数据：待绑定实际证据",
+              "updated": "示例 · 未连接会话日志",
+              "owner": "待分配"
+            },
+            {
+              "id": "T322",
+              "title": "质量门禁",
+              "role": "task",
+              "stage": 0,
+              "status": "ready",
+              "attention": "parked",
+              "next": "定义审阅规则",
+              "summary": "生成内容需可追溯到输入",
+              "children": [],
+              "decision": "",
+              "evidence": "演示数据：待绑定实际证据",
+              "updated": "示例 · 未连接会话日志",
+              "owner": "待分配",
+              "dependsOn": [
+                "T321"
+              ]
+            }
+          ],
+          "decision": "",
+          "evidence": "演示数据：待绑定实际证据",
+          "updated": "示例 · 未连接会话日志",
+          "owner": "待分配"
+        }
+      ],
+      "decision": "",
+      "evidence": "演示数据：待绑定实际证据",
+      "updated": "示例 · 未连接会话日志",
+      "owner": "待分配"
+    },
+    {
+      "id": "P04",
+      "title": "支付产品知识体系",
+      "role": "goal",
+      "stage": 3,
+      "status": "review",
+      "attention": "parked",
+      "next": "归档稳定规则并区分规范与假设",
+      "summary": "支付、卡核心和清算领域知识长期演进",
+      "children": [
+        {
+          "id": "W41",
+          "title": "发卡/收单知识",
+          "role": "capability",
+          "stage": 3,
+          "status": "review",
+          "attention": "parked",
+          "next": "统一术语与证据来源",
+          "summary": "卡组织、授权、清算、账务、争议",
+          "children": [
+            {
+              "id": "T411",
+              "title": "Click to Pay / Token",
+              "role": "task",
+              "stage": 3,
+              "status": "review",
+              "attention": "parked",
+              "next": "核验规范版本",
+              "summary": "更新发卡侧交易时序",
+              "children": [],
+              "decision": "",
+              "evidence": "演示数据：待绑定实际证据",
+              "updated": "示例 · 未连接会话日志",
+              "owner": "待分配"
+            }
+          ],
+          "decision": "",
+          "evidence": "演示数据：待绑定实际证据",
+          "updated": "示例 · 未连接会话日志",
+          "owner": "待分配"
+        },
+        {
+          "id": "W42",
+          "title": "产品非功能与合规",
+          "role": "capability",
+          "stage": 2,
+          "status": "active",
+          "attention": "parked",
+          "next": "核对 PCI 与范围边界",
+          "summary": "性能、安全、可用性与审计",
+          "children": [
+            {
+              "id": "T421",
+              "title": "PCI DSS 差异整理",
+              "role": "task",
+              "stage": 2,
+              "status": "active",
+              "attention": "parked",
+              "next": "审校适用范围",
+              "summary": "区分产品自带和实施支持",
+              "children": [],
+              "decision": "",
+              "evidence": "演示数据：待绑定实际证据",
+              "updated": "示例 · 未连接会话日志",
+              "owner": "待分配"
+            }
+          ],
+          "decision": "",
+          "evidence": "演示数据：待绑定实际证据",
+          "updated": "示例 · 未连接会话日志",
+          "owner": "待分配"
+        }
+      ],
+      "decision": "",
+      "evidence": "演示数据：待绑定实际证据",
+      "updated": "示例 · 未连接会话日志",
+      "owner": "待分配"
+    }
+  ]
+}

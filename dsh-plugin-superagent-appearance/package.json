@@ -1,0 +1,12 @@
+{
+  "name": "dsh-plugin-superagent-appearance",
+  "version": "0.1.0",
+  "private": true,
+  "description": "护眼绿浅色主题外观层：通过 webserver/index-inject 注入覆盖样式，仅浅色生效。",
+  "type": "module",
+  "main": "lib/index.js",
+  "license": "MIT",
+  "dsh": {
+    "manifestVersion": 1
+  }
+}

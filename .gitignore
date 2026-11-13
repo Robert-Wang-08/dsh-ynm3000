@@ -20,3 +20,17 @@ claude-mem-lab/
 
 # PTC 报告/运行产物不入库（2026-11-10 用户指定）；已有历史跟踪文件不自动撤销
 docs/ptc/
+
+# Health reporter: private runtime reports, caches and device bindings stay local
+tools/superagent_health/__pycache__/
+tools/superagent_health/*.sqlite*
+tools/superagent_health/binding.env.json
+tools/superagent_health/config.local.json
+
+# 本地运行产物与临时备份，不入库
+__pycache__/
+.archify/
+.dsh-progress/
+.tmp-*
+downloads/
+AGENTS.md.bak-*

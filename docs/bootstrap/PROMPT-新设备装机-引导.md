@@ -111,6 +111,7 @@ skillhub-source: not-managed
      重启 DSH 后 `GET http://127.0.0.1:3080/api/dsh-embedded-browser/health` 返回 `{"ok":true,"version":"0.3.0",...}`；
      新开会话让 AI 调 `browser_embedded_navigate`，右侧栏会自己弹出该会话的 Browser tab。
      回退：`dsh plugin --profile <profile> remove dsh-embedded-browser`（`%USERPROFILE%\.dsh\embedded-browser\profile` 保留，登录态不丢）。
+    - **远程访问 `ds-harness-remote`：2026-11-12 已登记「不再使用」，不要装**。本机实测结论：它以 Host 身份把本机会话/工作区开放给云端账号下的其他设备（第三方控制面 `dsh.r2049.cn` + Noise 端到端数据面），默认 `terminal`/`remoteTools`/`hostControl`/`codex`/`acp` 全开，**配对一台设备等于交出 Host 全权**（含远程终端、文件上传、代签审批、可把沙箱切到 `danger-full-access`）。若确需重装：按 §4.7 先测试 profile 后生产 profile、先停宿主再 `add`，并在 `cordis.patch.yml` 里把这些能力显式关到最小；卸载后还要删 `%USERPROFILE%\.dsh\ds-harness-remote`（设备私钥与服务器凭据）并在账号侧吊销设备。
    - **`dsh-wechat-hitl`（微信人工确认回环）不走 `dsh plugin add`**：源码在
      `<仓库根>\dsh-wechat-hitl\pkg\dsh-wechat-hitl`，运行时必须是 profile `node_modules` 下的
      **目录副本**，再由该 profile 的 `cordis.patch.yml` 挂载：
@@ -169,7 +170,13 @@ skillhub-source: not-managed
     - 启停：`pwsh -File dsh-superagent-service.ps1 start|stop|status`。验收：3082 监听 + `status` 显示
       `health : no error entries` + `GET /orchestrator/api/state`（带头 `x-orchestrator-request: 1`）返回 200；
       `setup : github/repositoryUnset` 属**首次启动的正常状态**，去面板填仓库与 gh CLI 后才开始轮询。
-6. **安装后偏差比较验收**（install.ps1 第 4.6 步已自动跑过一次；手动复核用同一条命令）：
+6. **注册 git 巡检自动化（推荐）**：确认脚本已随本仓库 git pull 就位后，先看计划，再去掉 -DryRun 注册；巡检独立于 superagent，服务停机也可运行：
+   ```powershell
+   pwsh -NoProfile -File <仓库根>\dsh-git-watchdog-register.ps1 -DryRun
+   pwsh -NoProfile -File <仓库根>\dsh-git-watchdog-register.ps1
+   ```
+   验收：Start-ScheduledTask -TaskName 'DSH-Git-Watchdog' 后看 <仓库根>\.ptc\reports\git-watchdog-*.json；移除用同一脚本 -Remove。配置与铁律见 [git 巡检运维说明](../ops/git-watchdog.md)。
+7. **安装后偏差比较验收**（install.ps1 第 4.6 步已自动跑过一次；手动复核用同一条命令）：
    ```powershell
    node <仓库根>\dsh-config-pack\scripts\verify-install.mjs --profile packed
    # 可选：对拍另一台设备的观察基线（逐包版本 + 采样文件 SHA256）
@@ -183,10 +190,10 @@ skillhub-source: not-managed
    **若 `dsh plugin` 报 `ERR_PNPM_UNEXPECTED_STORE` 或 `ERR_PNPM_PREPARE_PACKAGE`**：
    这是 pnpm store 与本机 profile 的 `.modules.yaml` 记录不一致，按
    `docs/bootstrap/pnpm-store-与重链.md` 先统一 store 再重链该 profile，然后回到本步骤。
-7. **生效**：关掉 DSH 重新打开（首次直接 `dsh web` 启动，默认 http://127.0.0.1:3080），
+8. **生效**：关掉 DSH 重新打开（首次直接 `dsh web` 启动，默认 http://127.0.0.1:3080），
    **新开一个会话**（工具表在会话启动时冻结，旧会话看不到新工具），
    在新会话里实际派发一次子代理验证路由可用。
-8. **报告**：列出实际使用的共享盘路径、profile 名、config-pack tag、可选组安装结果、
+9. **报告**：列出实际使用的共享盘路径、profile 名、config-pack tag、可选组安装结果、
    验收三项输出摘要；如有跳过的密钥项，单独提醒用户补。
 
 ## 范围外（不要主动做）

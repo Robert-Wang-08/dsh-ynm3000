@@ -35,6 +35,12 @@ git clone --recurse-submodules https://github.com/Robert-Wang-08/dsh-ynm3000.git
 
 根目录的 `dsh-menu.ps1` 是本机运维入口。公开发布的一键安装仍走 `dsh-config-pack` 的 GitHub tag，不从本仓库安装。
 
+## Superagent 定期健康报告
+
+仓库脚本服务已提供心跳/组件状态、实际响应模型、今日关联会话、可追溯recap、未完成与工单人工事项，以及SQLite可靠发送队列。默认发送关闭；核实管理人和bot绑定后可安装每分钟采样任务。独立于DSH profile，无需重启宿主。
+
+运行、绑定、验收与回滚见 [健康报告操作手册](docs/ops/superagent-health-report.md)；服务入口为 [service.py](tools/superagent_health/service.py)。dashboard用量保持可降级：认证和worker扫描覆盖未满足时不报告完整消耗金额。
+
 ## 新设备安装
 
 在 `dsh-config-pack` 里一条命令。有共享盘就读已经填好的答案；没有就用包内模板，或把说明交给 AI。然后装包、写路由、设置用户环境变量。密钥不进答案文件。
@@ -110,6 +116,21 @@ pwsh -NoProfile -File .\dsh-commit-backup.ps1 -RehearseOnline -Push -Message "ch
 - 配置包单入口仍可用：`dsh-config-pack\scripts\dsh-backup.ps1 backup -AllProfiles` / `restore -AllProfiles -Snapshot <目录>`。
 
 一句话版本说明见 [docs/ops/DSH-一键备份与恢复-简要说明.md](docs/ops/DSH-一键备份与恢复-简要说明.md)；完整参数、排除规则与已知限制见 [docs/ops/一键提交与备份.md](docs/ops/一键提交与备份.md)；换机步骤见 [新设备装机引导](docs/bootstrap/PROMPT-新设备装机-引导.md)。
+
+## git 巡检自动化（git-watchdog）
+
+独立 Windows 计划任务检查 gitsync 清单中的本机仓库与 DSH 一键备份滞留；superagent 服务停机仍可运行，不依赖任何 profile。
+
+```powershell
+# 手动离线巡检，完整 JSON 回执（报告与日志照写）
+pwsh -NoProfile -File .\dsh-git-watchdog.ps1 -DryRun -Json
+# 先看计划，再注册；移除用 -Remove
+pwsh -NoProfile -File .\dsh-git-watchdog-register.ps1 -DryRun
+pwsh -NoProfile -File .\dsh-git-watchdog-register.ps1
+pwsh -NoProfile -File .\dsh-git-watchdog-register.ps1 -Remove
+```
+
+work 组只做本地检查并提醒；personal/thirdparty 干净且落后时才受限快进，脏或领先则提醒管理人；引擎 drift/conflict 时完整 report-only。配置、提醒渠道、退出码与跨设备操作见 [git 巡检运维说明](docs/ops/git-watchdog.md)。
 
 ## 能力清单（逐组件：用途与 fix 原因）
 
@@ -245,6 +266,7 @@ dsh plugin --profile web add D:\src\dsh\dsh-plugin-new-session
 | `dsh-recent-sessions` | 0.1.2 | 运行时验证 | web | 跨工作区最近会话面板 |
 | `dshmarket` | 1.66.21 | 运行时验证 | web | 插件市场面板 |
 | `dsh-embedded-browser` | —（当前 profile 未启用） | 未验证 | 未启用 | 历史登记；启用时需配置 `browserPath` 与 `lazyTools` |
+| `ds-harness-remote` | 0.6.4（npm registry，无 `engines.dsh` 声明） | 运行时验证（0.2.1-rc.5 启动、`--dump-config` 均通过；上游自述基线 `0.2.2-rc.1`，保留 0.2.1-rc.5 载体） | **无 — 2026-11-12 停用（`web` 从未启用）** | **2026-11-12 登记「不再使用」并清理**：从 `plugtest` 卸载（`dsh plugin remove`，依赖/bundle/`node_modules` 三层已核对为空），删除 `~/.dsh/ds-harness-remote` 设备私钥与服务器凭据，账号侧设备吊销待用户在 Remote 客户端操作。停用理由：默认全开 `terminal`/`remoteTools`/`hostControl`/`codex`/`acp`，配对即等同交出 Host 全权，且私钥明文落盘受 `CodexSandboxUsers` 可读 ACL 影响；本机无远程访问刚需。历史：2026-11-10 首次安装并验证（侧栏「Remote」入口、Host 身份与 Noise 握手正常，账号未登录故未建立隧道） |
 
 ### Bundle 清单（web profile，按加载顺序）
 
@@ -282,6 +304,10 @@ dsh plugin --profile web add D:\src\dsh\dsh-plugin-new-session
 | `superagent` | web 副本 + `dsh-superagent` + `dsh-plugin-eye-care-bg`（共 23 个 bundle，`dsh-config-pack` 仍排最后） | 独立服务，`127.0.0.1:3082`；护眼底色只在本 profile 启用 |
 | `headless` | 最小组合 | 无第三方 UI/插件 |
 
+> 2026-11-10 实测：本机测试 profile 的目录名是 `plugtest`（上表 `plugintest` 为历史登记名）。按 `AGENTS.md` §4.7 安装闸门，第三方插件先在这里验证再决定是否进 `web`。
+>
+> 2026-11-12：`plugtest` 曾承载的 `ds-harness-remote@0.6.4` 已登记停用并卸载，现组合回到与 `web` 同构（差异仅为 `patchReload` 等本地开关）。
+
 ### 兼容性与验收
 
 ```powershell
@@ -290,6 +316,10 @@ dsh --profile web --dump-config > $null            # exit 0；无 did not activa
 dsh --profile superagent --dump-config > $null     # exit 0；含 eye-care-bg 行；superagent profile 同门槛
 dsh plugin --profile web list
 pwsh -NoProfile -File .\dsh-config-pack\scripts\dsh-backup.ps1 backup -AllProfiles -RehearseOnline
+
+# 测试 profile 冒烟（验证第三方插件能否干净激活，不碰生产 web）
+dsh --profile plugtest --dump-config > $null      # exit 0；无 did not activate / patch entry not found
+dsh --profile plugtest --host 127.0.0.1 --port 3081 --no-open   # 启动日志看目标插件的激活行
 ```
 
 登记内容必须与实际安装和最新 bundle 一致；宿主升级时整表复核并更新本节基线日期。

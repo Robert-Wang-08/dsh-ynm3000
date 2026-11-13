@@ -1,0 +1,40 @@
+{
+  "schema_version": "1.0",
+  "contract_name": "superagent-health-p0-dry-run",
+  "objective_guard": "仅做只读契约验证与dry-run样报；不发送消息、不启动scan、不修改profile或运行配置",
+  "deliverables": [
+    {
+      "id": "dry-run-report",
+      "kind": "report",
+      "path_pattern": "docs/design/superagent-health-report/p0-dry-run-*.md",
+      "format": "Markdown UTF-8",
+      "required": true,
+      "acceptance": [
+        "记录3082/3083状态探测及认证结果",
+        "记录工单、人工事项、session/model/recap字段可见性",
+        "核对worker目录与dashboard扫描根覆盖边界",
+        "仅在可验证时报告dashboard状态/用量；未知不得填零",
+        "生成不含真实收件人和消息发送的样报",
+        "明确所有阻塞与下一步"
+      ]
+    }
+  ],
+  "worker_output": {
+    "format": "JSON",
+    "schema": "C:/Users/wwm_1/.agents/skills/ptc-multi-agent-control/assets/worker-receipt.schema.json"
+  },
+  "final_response_sections": [
+    "根任务与目标",
+    "完成项",
+    "实际路由与降级",
+    "产出物",
+    "验证证据",
+    "限制与下一步唯一动作"
+  ],
+  "invariants": [
+    "controller_only_writes_ledger",
+    "one_root_task_per_session",
+    "review_and_done_require_evidence",
+    "done_requires_progress_100"
+  ]
+}
