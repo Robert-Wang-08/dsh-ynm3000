@@ -76,3 +76,19 @@ superagent worker 的创建路径：
 
 - 过滤是客户端派生视图，Host 数据（`workspace.json` / `archivedSessionIds`）不变；换 GUI 或换插件列表模式仍旧可见（官方 WorkspaceBrowser 也照旧过滤 subagent，但会显示 worker）。
 - 本机同时存在 3080（web）与 3082（superagent）两个宿主，任一宿主的改动只对该宿主的页面生效，要两边都刷。
+
+## 9. 实现（2026-11-13，方案 D 落地）
+
+已在插件 `dsh-plugin-sidebar-visibility` 落地「隐藏任务」开关（commit `7944884`，`main`）：
+
+- `src/client/superagent-filter.ts`：新增纯函数 `isSuperagentWorkPath` / `isWorkerSessionId` / `isSuperagentTaskSession`，只认 `/.dsh/state/superagent/work` 路径段（Windows 反斜杠、大小写不敏感、目录边界匹配），不依赖用户名或盘符。
+- `src/client/visibility-store.ts`：偏好新增 `hideSuperagentTasks`（默认 false，沿用 `dsh.sidebar-visibility.v1` 单键）。
+- `src/client/WorkspaceTree.tsx`：树顶「隐藏任务」勾选框；打开后 `visibleSession()` 过滤 `worker-*` 会话，`visibleWorkspaces` 过滤 work 工作区，分组 / 目录树 / 平铺 / 检索 / 置顶区一致生效；关闭立即恢复。
+- 测试：`node scripts/test-superagent-filter.mjs`（13 项）、`test-hierarchy.mjs`（26 项）、`test-bundle.mjs` 全过；`pnpm run bundle` 产物已入库。
+
+本机实测（web profile，1440×2600 同视口、同一浏览器会话；会话标题已模糊）：勾选前 36 个工作区分组（其中 22 个 `.dsh/state/superagent/work/*`），勾选后 14 组，`worker-*` 会话与 work 工作区全部消失；取消勾选立即恢复（DOM 计数 36 ↔ 14）。
+
+- [勾选前：36 组，worker 会话与任务工作区可见](../screenshots/superagent-task-filter/before-worker-visible.png)
+- [勾选后：14 组，superagent 任务整体退出列表](../screenshots/superagent-task-filter/after-tasks-hidden.png)
+
+生效条件与限制：改动只影响插件增强树；官方「原始列表」模式仍显示 worker（与方案 D 的说明一致）。两个宿主（3080 web / 3082 superagent）都要重启 `dsh` 并刷新浏览器才会加载新 client bundle；本次未重启宿主。
