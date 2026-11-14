@@ -41,5 +41,6 @@
 - Cursor 完整还原、DSH compaction、Claude 子代理去重、Codex 归档完整性仍未验证，文中已逐项标注。
 - 模型回执只能证明“调用返回了非空输出”，不证明模型身份由 provider 独立背书。
 - Focus Hub 集成是方案 A，不是已实现；本次只读核对了 325+19 测试、216 活跃对象/28 会话/95 创建/17 活跃洞察/16 任务；全 workspace、V2 元数据、多源 dedupe 仍需 P0 验证。
-- **P0 新发现**：`dsh-source.firstFrameText` 只取 1MiB 解首帧，1,384 个 v4 文件中 191 个 ≥1MiB，191/191 失败；修好前不能宣称 DSH 覆盖完整。
+- **P0 新发现**：`dsh-source.firstFrameText` 只取 1MiB 解首帧，1,384 个 v4 文件中 191 个 ≥1MiB，191/191 失败；修复预览用流式 header 已 **191/191** 通过，但补丁尚未应用到 Focus Hub。
+- P0 修复预览：`evidence/fix-preview/firstframe-1mib.patch` + `verify.mjs`（未应用；应用前需补回归/测试）。
 

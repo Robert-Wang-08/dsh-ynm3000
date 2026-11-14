@@ -53,6 +53,15 @@
 .PARAMETER IncludeFocusHub
   把 D:\src\dsh\focus-hub（独立应用仓库，根仓库 .gitignore 已排除）纳入本次范围。
 
+.PARAMETER IncludeSiblingRepos
+  把工作区之外的兄弟检出（默认 <工作区父目录>\dsh-superagent）纳入本次范围。
+  它与 .gitmodules 里的 dsh-superagent 子模块同源：工作区内的 gitlink 目录是空的，
+  真实检出在兄弟目录，靠这条开关才能把它一起提交/推送。
+
+.PARAMETER SiblingRepo
+  追加兄弟检出路径（可多个）。与 -IncludeSiblingRepos 一起生效；
+  路径必须已存在且含 .git，否则跳过并在盘点里标出。
+
 .PARAMETER RepairDetached
   子仓库处于游离 HEAD 时，自动切回 origin/HEAD 指向的分支。默认只报告不处理。
 
@@ -102,6 +111,8 @@ param(
 	[switch]$RehearseOnline,
 	[switch]$IncludeUntracked,
 	[switch]$IncludeFocusHub,
+	[switch]$IncludeSiblingRepos,
+	[string[]]$SiblingRepo = @(),
 	[switch]$RepairDetached,
 	[string[]]$Only = @(),
 	[string]$BackupDest = '',
@@ -113,7 +124,14 @@ param(
 $ErrorActionPreference = 'Stop'
 $PSNativeCommandUseErrorActionPreference = $false
 
-$ScriptVersion = '1.3.0'
+# 原生 git 输出是 UTF-8；Windows 上 pwsh 默认按控制台代码页（常见 cp936）解码，
+# 中文路径会被解成乱码（"一键" -> "涓€閿"），原样交给 git add 就报
+# "pathspec ... did not match any files"（2026-11-14 实测：GBK 控制台下根仓库 11 个文件暂存失败）。
+# 这里强制按 UTF-8 解码原生命令输出；下面的路径解析还有一层 GBK->UTF-8 修复兜底。
+try { [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false) } catch { }
+$OutputEncoding = [System.Text.UTF8Encoding]::new($false)
+
+$ScriptVersion = '1.4.2'
 if ([string]::IsNullOrWhiteSpace($RootDir)) { $RootDir = $PSScriptRoot }
 $Root = $RootDir
 $Stamp = (Get-Date).ToUniversalTime().ToString('yyyyMMddTHHmmssZ')
@@ -136,7 +154,8 @@ $JunkPatterns = @(
 	'.ptc/*', '.ptc', 'node_modules/*', '__pycache__/*',
 	'*.bak', '*.bak-*', '*.log', '*.tmp', '.tmp-*', '.tmp-*/*',
 	'tmp/*', 'temp/*', 'downloads/*', '.wip-backup-*/*', '.wip-backup-*',
-	'*.tsbuildinfo', '.DS_Store'
+	'*.tsbuildinfo', '.DS_Store',
+	'*.tgz', '*.tar.gz', '*.zip', '*.7z', '*.exe', '*.nupkg'
 )
 
 function Test-AnyPattern {
@@ -175,6 +194,25 @@ function Get-RepoTargets {
 			Path = $d.FullName
 			Kind = $(if ($d.Name -eq 'focus-hub') { 'sibling' } else { 'submodule' })
 		})
+	}
+	if ($IncludeSiblingRepos) {
+		$candidates = New-Object System.Collections.Generic.List[string]
+		$candidates.Add((Join-Path (Split-Path $Root -Parent) 'dsh-superagent'))
+		foreach ($s in $SiblingRepo) { if (-not [string]::IsNullOrWhiteSpace($s)) { $candidates.Add($s) } }
+		$seen = @{}
+		foreach ($cand in $candidates) {
+			$full = $null
+			try { $full = (Resolve-Path -LiteralPath $cand -ErrorAction Stop).Path } catch { $full = $null }
+			if ($null -eq $full) { Write-Warn2 ("兄弟检出不存在，已跳过：" + $cand); continue }
+			if ($seen.ContainsKey($full.ToLowerInvariant())) { continue }
+			if (-not (Test-Path -LiteralPath (Join-Path $full '.git'))) { Write-Warn2 ("兄弟检出没有 .git，已跳过：" + $full); continue }
+			$seen[$full.ToLowerInvariant()] = $true
+			$children.Add([pscustomobject]@{
+				Name = (Split-Path $full -Leaf)
+				Path = $full
+				Kind = 'sibling'
+			})
+		}
 	}
 	$ordered = @($children | Sort-Object Name)
 	# 根仓库永远最后处理：提交根仓库时子模块指针已经落定。
@@ -242,6 +280,18 @@ function Get-RepoState {
 			$path = $path -replace '\\', '\'
 		}
 		if ($path -match ' -> ') { $path = ($path -split ' -> ')[-1] }
+
+		# 解码兜底：控制台代码页不是 UTF-8 时，上面的调整可能没生效（例如嵌套调用、受限宿主）。
+		# 路径在磁盘上不存在、但把当前字符串按 GBK 取字节再按 UTF-8 解码后存在，就用修复后的路径。
+		if (-not (Test-Path -LiteralPath (Join-Path $repo $path))) {
+			try {
+				$repaired = [System.Text.Encoding]::UTF8.GetString([System.Text.Encoding]::GetEncoding(936).GetBytes($path))
+				if ($repaired -ne $path -and (Test-Path -LiteralPath (Join-Path $repo $repaired))) {
+					Write-Warn2 "$($state.Name) : 路径编码修复 $path -> $repaired"
+					$path = $repaired
+				}
+			} catch { }
+		}
 
 		$isUntracked = $xy.StartsWith('??')
 		if (Test-AnyPattern -Path $path -Patterns $DenyPatterns) {
@@ -523,6 +573,13 @@ if ($backupResult.Status -eq 'ok' -and $backupResult.HasBundle -and -not [string
 	Write-Info "bundle：$($backupResult.Bundle)"
 	Write-Info "跨机恢复：把该目录拷到目标机后运行 dsh-restore.ps1 -Snapshot <bundle> -Apply -AllowPartial"
 }
+if ($backupResult.Status -in @('failed', 'missing', 'unverified')) {
+	Write-Err "备份未通过校验（status=$($backupResult.Status)）：本次不提交、不推送，避免出现没有恢复点的收口。"
+	$receipt.failures = 1
+	$receiptPath = Write-ReceiptFile
+	Write-Info "回执：$receiptPath"
+	exit 3
+}
 $receipt.backup = [ordered]@{
 	status          = $backupResult.Status
 	detail          = $backupResult.Detail
@@ -577,12 +634,19 @@ foreach ($s in $states) {
 # 3) 推送
 if ($Push) {
 	Write-Head '推送'
+	$pushFailedCount = 0
 	if ($committed.Count -eq 0) { Write-Info '本次没有新提交；仍检查各仓库的待推送提交。' }
 	foreach ($s in $states) {
 		if ($s.Detached) { Write-Warn2 "$($s.Name) : 游离 HEAD，跳过推送"; continue }
 		if ([string]::IsNullOrWhiteSpace($s.Upstream)) { Write-Warn2 "$($s.Name) : 无上游分支，跳过推送"; continue }
 		$aheadNow = Get-GitLine -Repo $s.Path -GitArgs @('rev-list', '--count', "$($s.Upstream)..HEAD")
 		if ($aheadNow -notmatch '^\d+$' -or [int]$aheadNow -le 0) { Write-Info "$($s.Name) : 无待推送提交"; continue }
+		if ($s.Kind -eq 'root' -and $pushFailedCount -gt 0) {
+			Write-Err "$($s.Name) : 有 $pushFailedCount 个子仓库推送失败，跳过根仓库推送（否则远端子模块指针会断链）"
+			$failures++
+			$receipt.repositories += [ordered]@{ name = $s.Name; action = 'push-skipped'; reason = 'sub-push-failed'; count = [int]$aheadNow }
+			continue
+		}
 		$pushResult = Get-GitExit -Repo $s.Path -GitArgs @('push', 'origin', $s.Branch)
 		if ($pushResult.Exit -eq 0) {
 			Write-Ok "$($s.Name) : 已推送 $aheadNow 个提交到 origin/$($s.Branch)"
@@ -591,6 +655,7 @@ if ($Push) {
 			Write-Err "$($s.Name) : 推送失败（exit $($pushResult.Exit)）"
 			Write-Host $pushResult.Text
 			$failures++
+			if ($s.Kind -ne 'root') { $pushFailedCount++ }
 			$receipt.repositories += [ordered]@{ name = $s.Name; action = 'push-failed'; count = [int]$aheadNow }
 		}
 	}

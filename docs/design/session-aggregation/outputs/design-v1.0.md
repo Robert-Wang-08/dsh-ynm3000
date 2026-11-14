@@ -739,7 +739,7 @@ confidence: high
 | D19 | 改进/SOP 升级 | 无实测不升级；一次成功只算参考案例 | 成功三次自动 SOP | 规则污染风险 |
 | D20 | 权威冲突裁决 | 字段级 `authority` + `authority_decision`；冲突不静默选边 | 固定优先级（如 PTC 永远高） | 跨系统状态互相覆盖 |
 | D21 | 与 Focus Hub 的合并形态 | **同一产品、两个组件**：Focus Hub 工作台/对象权威 + 本项目的摄取/提炼适配器；分阶段合并 | 立刻单进程/单仓库合并；或保持两个产品 | 耦合度/交付速度 |
-| D22 | DSH 摄取实现 | **先修 `firstFrameText` 1MiB 上限，再复用** `dsh-source.mjs`/`flow-runner.mjs`/`analysis-adapter.mjs`；只扩展全 workspace/多来源 | 从零重写 DSH 解析/分析 | 交付周期/回归风险 |
+| D22 | DSH 摄取实现 | **先修 `firstFrameText` 的 1MiB 输入/128MiB 输出上限（改流式 header），再复用** `dsh-source.mjs`/`flow-runner.mjs`/`analysis-adapter.mjs`；只扩展全 workspace/多来源 | 从零重写 DSH 解析/分析 | 交付周期/回归风险 |
 | D23 | V2 洞察元数据 | 先增量写 `derived_from.insight`（类型/边界/新颖性/关系），必要时再升对象字段；旧 95 创建/17 活跃不改 | 改写对象库/重算旧洞察 | 兼容性/迁移风险 |
 | D24 | 全局摄取游标 | 独立 `__ingest__`/companion cursor 命名空间；不占用真实任务 ID | 用真实任务扫描所有会话 | 污染任务读点/视图 |
 
@@ -953,6 +953,7 @@ Focus Hub 已经有一套可复用的对象语义：`SESSION / ARTIFACT(kind=sum
 - 数据：216 活跃对象（186 artifacts：file 160/insight 17/summary 9/report 0；28 sessions；2 rules）；created 302 artifacts，116 retired（insight 78/summary 25/report 13）；28 SESSION 全部有 cursors；`project.json` 16 任务/6 项目/3 条旧式洞察；20 建议（9 采纳/11 驳回）；58 关联；1 acceptance；1 stage override；rev 28。
 - 文档滞后：`mvp/README` 仍写“233 测试/没有真实 LLM 提炼”，但代码已有 provider 链与 `/api/flow/run`；以代码/测试/数据为准。
 - **P0 实测（2026-11-13）**：1,384 个 v4 会话文件中 **191 个 ≥1MiB**；`dsh-source.firstFrameText` 只取前 1MiB，191/191 全部 `zstd-decode`，完整 buffer 可正常解。**这是复用前的 P0 阻断项**，详见审计 4.6。
+- **P0 修复预览（2026-11-14）**：副本改成流式读到首行，**191/191 解出 header，953ms**；5 个 workspace `partial:false`。补丁/脚本在 `evidence/fix-preview/`，未应用到 Focus Hub。
 
 ### 16.2 已实现 vs 仅设计
 
@@ -982,7 +983,7 @@ Focus Hub 已经有一套可复用的对象语义：`SESSION / ARTIFACT(kind=sum
 
 ### 16.4 与 v1.1 的差异（已写入正文）
 
-1. **DSH 摄取复用** `dsh-source`，不再自写；但 P0 **先修 1MiB 首帧上限**（191/1,384 长会话失败），否则复用不完整。
+1. **DSH 摄取复用** `dsh-source`，不再自写；但 P0 **先修 1MiB 首帧上限**（191/1,384 长会话失败），否则复用不完整；**修复预览已 191/191 通过**，仍需应用补丁+回归。
 2. **全局摄取独立 cursor**：用 `__ingest__`/companion 命名空间，不占用真实任务 ID；否则任务视图出现假读点。
 3. **任务树唯一**：不建平行任务；未映射先 suggestion，采纳才进 `project.json.tasks`。
 4. **V2 是新增层**：现有 analysis-adapter 是 V1；V2 元数据先增量写 `derived_from.insight`，不改 95 创建/17 活跃旧洞察。
@@ -992,6 +993,7 @@ Focus Hub 已经有一套可复用的对象语义：`SESSION / ARTIFACT(kind=sum
 
 - **P0 smoke（2026-11-13）**：前 5 个 workspace 共 305 个登记会话；`limit=20` 时 44–126ms、每个只读到 1–6 个会话；其中 `D:\nutstore\1.logseq` 命中一个 1.8MB 长会话 `zstd-decode`（即 1MiB 上限）。这不是全量覆盖 benchmark。
 - **1MiB 首帧修复的回归**：修后 191 个长会话全部可读；加一个 >1MiB 首帧夹具进 `dsh-source.test.mjs`。
+- **修复预览（2026-11-14）**：流式 header 副本 191/191 成功（953ms），5 个 workspace `partial:false`；logseq `limit=500` 扫描 37 sessions/500 messages/648ms/partial:false。补丁 `firstframe-1mib.patch`、脚本 `verify.mjs`；尚未应用到 Focus Hub。
 - 1,384 个 v4 文件/1,424 个会话目录按 workspace 枚举扫描的覆盖/耗时；全 workspace 的 cursor 命名空间。
 - `dsh-source` 当前 28 SESSION 的 `summary.flowCursors` 与 `cursors` 是否一致（本次只读字段，未跑 flow）。
 - V2 元数据放 `derived_from` 的兼容性；95 创建/17 活跃旧洞察的读取/筛选。

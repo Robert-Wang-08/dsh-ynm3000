@@ -18,11 +18,11 @@
 
 ## 2. 机器检查
 
-- **本地链接**：26 个 Markdown 相对链接全部可解析（0 missing；最终计数见第 7 节）。
+- **本地链接**：28 个 Markdown 相对链接全部可解析（0 missing；最终计数见第 7 节）。
 - **模型输出**：3 份非空（6astra 11,126 字；Opus 9,968 字；Kimi 6,366 字）；回执含 prompt/output sha256 与 usage。
 - **来源盘点**：DSH 1,424 会话、Codex 235 活跃 + 25 归档、Claude 54 主会话、Cursor 114 转录、OpenCode 302 会话/10,313 消息/43,028 parts/218 todos；与探测脚本输出一致。
 - **Focus Hub 实现核对**：`node --test mvp/test/*.test.mjs` **325/325**；`node mvp/tests/server-regression.mjs` **19/19**；当前 216 活跃对象/28 SESSION（均有 cursors）/95 创建/17 活跃洞察/2 rules/16 任务/6 项目/20 建议（9 采纳/11 驳回）/58 关联/1 acceptance/1 stage override；与只读统计一致。
-- **P0 新发现（2026-11-13）**：`dsh-source.firstFrameText` 对 >1MiB 文件只取 1MiB 解首帧；1,384 个 v4 文件中 191 个 ≥1MiB，191/191 全部 `zstd-decode`；完整 buffer 可正常解。**当前 325+19 测试未覆盖此夹具，复用前必须先修。**
+- **P0 新发现（2026-11-13）**：`dsh-source.firstFrameText` 对 >1MiB 文件只取 1MiB 解首帧；1,384 个 v4 文件中 191 个 ≥1MiB，191/191 全部 `zstd-decode`；完整 buffer 可正常解。**当前 325+19 测试未覆盖此夹具；修复预览（流式 header）已 191/191 通过，但补丁未应用到 Focus Hub。**
 - **只读探测**：`probe*.py` 对 DSH/Codex/Claude/Cursor/OpenCode 使用只读文件/`mode=ro`；Focus Hub 核对只读文件/测试临时目录；未执行源写入。
 
 ## 3. 结构检查
@@ -56,4 +56,4 @@
 
 ## 7. 最终链接检查
 
-26 个 Markdown 相对链接，0 missing（2026-11-13 本机检查；设计/审计/裁决/盘点/回执）。
+28 个 Markdown 相对链接，0 missing（2026-11-13 本机检查；设计/审计/裁决/盘点/回执）。

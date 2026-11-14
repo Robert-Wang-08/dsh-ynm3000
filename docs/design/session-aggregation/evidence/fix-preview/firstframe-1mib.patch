@@ -1,0 +1,55 @@
+diff --git a/mvp/dsh-source.mjs b/mvp/dsh-source.mjs
+index b020615..00dde11 100644
+--- a/mvp/dsh-source.mjs
++++ b/mvp/dsh-source.mjs
+@@ -73,15 +73,33 @@ function zstdAvailable() { return typeof zlib.zstdDecompressSync === "function";
+ 
+ /* ---- 单帧/多帧解码 ---- */
+ 
+-function firstFrameText(buf) {
++/* P0 preview: stream-decompress only until the first header line.
++   Avoids both the original 1 MiB input cap and decoding a >128 MiB first frame. */
++export function firstFrameHeader(buf) {
+   if (!zstdAvailable()) fail("zstd-unsupported", "当前 Node 缺少 zlib.zstdDecompressSync");
+-  const head = buf.length > (1 << 20) ? buf.subarray(0, 1 << 20) : buf;
+-  try {
+-    const r = zlib.zstdDecompressSync(head, { info: true, maxOutputLength: 128 * 1024 * 1024 });
+-    return r.buffer.toString("utf8");
+-  } catch (e) {
+-    fail("zstd-decode", "首帧解码失败：" + e.message);
+-  }
++  return new Promise((resolve, reject) => {
++    const stream = zlib.createZstdDecompress();
++    let text = '';
++    let settled = false;
++    const finish = (err) => {
++      if (settled) return;
++      settled = true;
++      try { stream.destroy(); } catch { /* already closed */ }
++      if (err) {
++        try { fail('zstd-decode', '首帧解码失败：' + err.message); } catch (e) { reject(e); }
++      } else {
++        resolve(text);
++      }
++    };
++    stream.on('data', (chunk) => {
++      text += chunk.toString('utf8');
++      if (text.includes('\n')) finish();
++      else if (text.length > (1 << 20)) finish(new Error('header exceeds 1 MiB without newline'));
++    });
++    stream.on('error', (e) => finish(e));
++    stream.on('end', () => finish());
++    stream.end(buf);
++  });
+ }
+ 
+ function parseHeaderLine(text, sessionId) {
+@@ -182,7 +200,7 @@ async function scanSession(session, workspaceCanonical, prev, options, warnings)
+   const file = path.join(session.dir, gen.name);
+   const buf = await fsp.readFile(file);
+   if (gen.zstd && buf.length > options.maxCompressedBytes) fail("too-large", "压缩文件超过上限：" + file);
+-  const headerText = gen.zstd ? firstFrameText(buf) : buf.toString("utf8");
++  const headerText = gen.zstd ? await firstFrameHeader(buf) : buf.toString("utf8");
+   const header = parseHeaderLine(headerText, session.sessionId);
+   if (!samePath(header.cwd, workspaceCanonical)) fail('workspace-mismatch', 'header.cwd 与请求工作区不一致：' + header.cwd);
+   const inherited = Number(header.inheritedEventCount || 0) || 0;

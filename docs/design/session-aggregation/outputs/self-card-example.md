@@ -60,7 +60,7 @@ confidence: high
 - [ ] 验证 Focus Hub `dsh-source` 对 28 会话/50 cursor 的只读重放；不重写解码。
 - [ ] 测 `/api/dsh/workspaces` + 3–5 个 workspace 的扫描耗时/覆盖；独立 ingest cursor 不污染真实任务。
 - [ ] 构造 30 个会话的任务身份金标，再扩到 50 任务/200 段 + 100 对硬负例。
-- [ ] P0 修 `dsh-source.firstFrameText` 1MiB 上限（191/1,384 长会话失败）；验证 suggestions/objects/tasks API；V2 元数据兼容 95 创建/17 活跃旧洞察。
+- [ ] P0 修 `dsh-source.firstFrameText` 1MiB 上限（191/1,384 长会话失败；流式预览已 191/191，待应用补丁+回归）；验证 suggestions/objects/tasks API；V2 元数据兼容 95 创建/17 活跃旧洞察。
 
 ## 证据与来源
 

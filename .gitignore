@@ -34,3 +34,7 @@ __pycache__/
 .tmp-*
 downloads/
 AGENTS.md.bak-*
+# 手工 scratch 与二进制工件（2026-11-14 收口评审 F5：显式排除，别指望 -IncludeUntracked 不扫）
+a-prime-demo.txt
+*.tgz
+*.tar.gz

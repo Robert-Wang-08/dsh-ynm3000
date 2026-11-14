@@ -260,7 +260,7 @@ dsh plugin --profile web add D:\src\dsh\dsh-plugin-new-session
 | `dsh-permission-compat` | 0.1.0 @ `a8e7e8b` | 0.2.1-rc.5 安装钉适配 | 带外工具，不挂 profile | 0.1.0 适配 0.2.1-rc.5 安装钉与诊断补丁 |
 | `dsh-superagent` | 0.1.0 @ `c0b7df4`（维护 fork） | engines dsh `^0.2.1-alpha.2`，0.2.1-rc.5 满足 | 独立 profile `superagent`，端口 3082 | 2026-11-13 原有 Feishu 回复修复已推送维护 fork：私聊不带 reply-in-thread，前导 @ 避免 CLI 文件展开；不含缓存兜底；Windows `stateDir` 绝对路径补丁见 `docs/ops/superagent-profile.md`；恢复核实与设置补录见 `docs/ops/superagent-restore-20261110.md` |
 | `dsh-plugin-eye-care-bg` | 0.1.0（root 仓库跟踪） | 运行时验证（无 peer/engines 声明） | 仅 `superagent`（3082 面板） | 0.1.0 护眼页面底色 `#C7EDCC`：纯客户端 CSS 注入，覆盖主题令牌 `--dsw-alias-bg-base`，不注册端点、不持凭据 |
-| `dsh-wechat-hitl` | —（无 `.git`，目录副本） | 未验证 | 未在 web 挂载 | 需先初始化/登记仓库，再按 profile 目录副本方式安装 |
+| `dsh-wechat-hitl` | submodule（HEAD `91b11ed`；workspace package 无 `version` 字段） | 运行时验证（无 `peerDependencies` / `engines` 声明） | web、headless、superagent、plugtest（目录副本 + `- insert: wechat-hitl` 挂载） | 2026-11-14 更正本行：已是带 `.git` 的子模块，且四个 profile 的 `cordis.patch.yml` 均挂载（旧记「无 `.git`、未在 web 挂载」已失准）；2026-11-13 入站去重、出站配置阻塞与失败留痕加固 |
 | `dsh-chat-import` | 0.25.2（npm 最新 0.26.4） | peer dsh `>=0.1.5-rc.1` | web | 外部聊天记录导入，保留工具调用/推理/结果 |
 | `dsh-mermaid-smooth` | 0.1.0 | 运行时验证 | web | Mermaid 默认渲染与平滑缩放/平移 |
 | `dsh-notify-bell` | 0.12.0 | 运行时验证 | web | 语义通知音：完成/阻塞/权限/提问/错误 |

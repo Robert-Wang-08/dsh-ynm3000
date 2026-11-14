@@ -98,7 +98,9 @@
 - `dsh-source.mjs` 的 `firstFrameText` 对大于 1MiB 的文件只取前 1MiB 调 `zstdDecompressSync`。zstd 帧不能在半帧处解；如果首帧压缩后 >1MiB，必然报 `unexpected end of file`。
 - 实测：本机 **1,384** 个 `session.v4.jsonl.zstd` 中，**191 个 ≥1MiB**；对这 191 个用 1MiB 头解码，**191/191 全部失败**；用完整 buffer 解同一个 1.8MB 文件，首帧正常解出 6,983,979 字节（session head 正常）。
 - 影响：**约 13.8% 的长会话被 `scanWorkspace` 标 `partial` 并跳过**；Focus Hub 当前 325+19 测试没有覆盖“首帧 >1MiB”的夹具，所以测试全过但真实覆盖有洞。
-- 修复建议（P0，先于“复用”声明）：`firstFrameText` 改用完整压缩 buffer（或流式读够首帧），并新增 >1MiB 首帧的回归测试；不要靠降低扫描范围或静默跳过。修好后重跑 3–5 个 workspace 的扫描，确认 191 个长会话不再 `zstd-decode`。
+- 修复建议（P0，先于“复用”声明）：`firstFrameText` 改成**流式解压到首行**（只取 header，不落整帧）；同时避免输入 1MiB 上限和 128MiB 输出上限。加 >1MiB 首帧回归；不要靠降低扫描范围或静默跳过。
+- **修复预览（2026-11-14，不改 Focus Hub）**：复制到 `evidence/fix-preview/`，把 `firstFrameText` 改为 `firstFrameHeader` 流式读到首个换行。实测 **191/191 长会话解出 header，953ms**；5 个 workspace `scanWorkspace` 全部 `partial:false`，`D:\nutstore\1.logseq` 的 1.8MB 会话不再报错；对该 workspace `limit=500` 扫描 **37 sessions/500 messages/648ms/partial:false**。补丁 [firstframe-1mib.patch](../evidence/fix-preview/firstframe-1mib.patch)、验证脚本 [verify.mjs](../evidence/fix-preview/verify.mjs)；**尚未应用到 Focus Hub，需先补回归/测试再合入**。
+- 第一次只改“完整 buffer”时是 **190/191**：一个 17MB 压缩、首帧输出 157MB 的会话撞上 `maxOutputLength=128MiB`；流式 header 方案同时解决两个上限。
 - 这是 **P0 阻断项**，不是设计假设：在修复前，不能说 Focus Hub 的 DSH 摄取“覆盖完整”；P1 复用必须先修。
 
 ### 4.5 数据/并发

@@ -60,7 +60,8 @@
 ## 5. 备份与恢复约束（用 `dsh-backup-restore` skill）
 
 - **什么必须备份**：改 profile 配置/插件清单之前；升级 config-pack 或 failover 之前；达到一个"验证通过"的稳定状态之后（留档）。
-- **一键入口**：`dsh-config-pack/scripts/dsh-backup.ps1`。`backup` 把当前 profile 写成 `%USERPROFILE%\.dsh\backups\dsh-backup-<时间戳>`；`restore` 默认只打印计划，`-Apply` 前自动写 `pre-restore-<时间戳>`。partial 快照写回要加 `-AllowPartial`。
+- **一键入口**：收口备份走工作区根的 `dsh-commit-backup.ps1`（盘点 → 全 profile bundle → 子仓库提交 → 根仓库最后 → 可选 `-Push`），恢复走 `dsh-restore.ps1`；配置包侧的 `dsh-config-pack/scripts/dsh-backup.ps1` 是单入口回退（`backup` 把当前 profile 写成 `%USERPROFILE%\.dsh\backups\dsh-backup-<时间戳>`；`restore` 默认只打印计划，`-Apply` 前自动写 `pre-restore-<时间戳>`）。partial 快照写回要加 `-AllowPartial`。
+- **覆盖口径（v1.4.0）**：脚本只发现「目录里有 `.git`」的仓库。子模块工作树为空时（本机 `dsh-superagent`：gitlink 指向仓库，真实检出在 `D:\src\dsh-superagent`）必须加 `-IncludeSiblingRepos`，否则该仓库永远在范围外；`focus-hub` 仍需 `-IncludeFocusHub`。
 - **改完配置的一键留档**：`scripts/config-snapshot.ps1`（backup/verify/restore/list）。它只钉住 10 个关键文件（web/plugtest 的 `cordis.patch.yml`+`package.json`、`pnpm-workspace.yaml`、`AGENTS.md`、PTC 的 bundle patch / `public-runtime-config.json` / `SKILL.md` / `ptc_route.py`），带 SHA256 manifest 与 DryRun 回滚，快照写 `~/.dsh/backups/ptc-config-<UTC>`；与上面的整 profile 快照互补，不替代。
 - **恢复协议**：先 `restore`（默认 DryRun）给用户看计划 → `-Apply` 时脚本自动先做 `pre-restore` 安全备份 → 重启 DSH 新开会话 → 按第 4 条验收。
 - **恢复插件**：配置文件恢复后优先 `pnpm install`（快路径，脚本已为每个 profile 生成 `reinstall-plugins.ps1`）；逐个 `dsh plugin add` 是稳路径，须遵守第 4 条三约束。
