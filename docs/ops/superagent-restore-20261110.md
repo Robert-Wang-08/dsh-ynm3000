@@ -171,7 +171,17 @@ C:/Users/wang/AppData/Roaming/npm/node_modules/@larksuite/cli/bin/lark-cli.exe
    本机钉在 `%USERPROFILE%\.lark-cli-superagent-aa79ee689678dd03`，由 service 脚本注入子进程。
    目录不一致的表现就是一直 `not_configured` 或 `invalid_client`。
 
-### 仍待做（唯一）
+### 端到端验收结果（2026-11-11 03:22）
 
-操作者在飞书里给机器人发一条消息（可单聊，或把它拉进群后 @ 它），确认 `GET /sources` 的 `feishu.stats.received` 从 0 变正、并开出工单。
+操作者在飞书群 `oc_f7d94fe2ae435cc1ac8f4cfec93d2ab9` 发了一句「是否在运行」，全链路跑通：
+
+| 环节 | 观测值 |
+| --- | --- |
+| 来源接收 | `GET /sources` → `feishu.stats = {received:1, filtered:0, lastAt:2026-11-10T19:22:31.152Z}`；health `feishu:ready "Listening for bot events"`、`history:ready "Configured groups and known direct chats recovered"` |
+| 漏斗 | `GET /overview` → `flow = {received:1, filtered:0, triggers:1, judged:1, accepted:0, evaluating:0, dropped:0}` |
+| 判定 | `GET /decisions?window=24h` → `kind=ignore, reason.code=said, values.text="状态询问（是否在运行），不涉及具体改动请求，无需建工单。"`，thread `feishu:oc_f7d94…:om_x100…`，threadTitle「是否在运行」 |
+| 工单 | `GET /tickets?state=all` → `0`（符合策略：只观察、不建单、不回话） |
+
+结论：**入站链路（长连接 → 触发 → 判定）已验证**，策略按设计把纯状态询问判为 `ignore`。
+要看到「工单 → 执行器 → PR」的完整闭环，需要发一条**明确的改动请求**（例：`把 README 里 XX 这段的错别字改一下` 或 `给 docs/ops 加一份 foo.md 说明`）。
 

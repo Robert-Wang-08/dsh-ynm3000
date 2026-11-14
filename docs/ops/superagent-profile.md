@@ -2,7 +2,15 @@
 
 本文记录把 `dsh-superagent` 作为 DSH 工作区子模块纳入、并通过复制 web profile 创建独立 superagent profile、在 `127.0.0.1:3082` 跑起来的全过程与运维要点。适用 profile：`superagent`（`C:\Users\wang\.dsh\profiles\superagent`）。全部事实来自 2026-11-10 本机 Windows 实测。
 
-## 1. 结果
+## 0. 当前源码来源（2026-11-13）
+
+- 维护 fork：`https://github.com/Robert-Wang-08/dsh-superagent-prototype.git`，已推送 `c0b7df4261b289e9c9e1192fa1d307fd5a35906e`；本机 `origin/main` 跟踪该 fork，原 `deepseek-ai` 上游保留为 `upstream`。
+- 本次只收口原三个文件的 Feishu 回复修复（私聊不带 `--reply-in-thread`、前导 `@` 不走 CLI 文件引用）；没有实施缓存缺失兜底，没有构建或重启服务。
+- 换机按根仓库 `.gitmodules` 获取 fork；旧设备更新根仓库后，子模块必须无未提交修改，再执行 `git submodule sync -- dsh-superagent`、`git submodule update --init -- dsh-superagent`。不得覆盖本地改动或使用 force/reset。
+- 源码更新不等于服务激活；新设备仍需构建并 apply/verify 本机补丁。现有服务的构建、停服与启动需另行批准。
+- 下文保留 **2026-11-10 首次安装历史记录**，其中旧 gitlink、上游 clone 命令及当时运行状态不代表当前维护源；新装与更新使用本节 fork 和装机引导。
+
+## 1. 结果（2026-11-10 历史）
 
 - `dsh-superagent` 已作为子模块登记进 `C:\Users\wang\src\dsh`（gitlink 提交 `8c32a9dc5d72c033816c6a8110b37f40cf94fba4`）。
 - `superagent` profile 已创建（复制自 web profile），服务已在 `127.0.0.1:3082` 启动。

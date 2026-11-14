@@ -21,7 +21,7 @@ git clone --recurse-submodules https://github.com/Robert-Wang-08/dsh-ynm3000.git
 - `dsh-plugin-provider-badge`
 - `dsh-plugin-sidebar-visibility`
 - `dsh-provider-failover`
-- `dsh-superagent`（上游 `deepseek-ai/dsh-superagent-prototype`，独立服务，不是插件：以 `link:` 装进**独立 profile `superagent`**，端口 3082；装机、补丁与验收见 [docs/ops/superagent-profile.md](docs/ops/superagent-profile.md)）
+- `dsh-superagent`（维护 fork `Robert-Wang-08/dsh-superagent-prototype`，原上游 `deepseek-ai/dsh-superagent-prototype` 保留为 `upstream`；独立服务，不是插件：以 `link:` 装进**独立 profile `superagent`**，端口 3082；装机、补丁与验收见 [docs/ops/superagent-profile.md](docs/ops/superagent-profile.md)）
 - `dsh-wechat-hitl`
 
 `dsh-wechat-hitl` 不走 `link:`：它以**目录副本**装进 `profiles/{web,headless}/node_modules/dsh-wechat-hitl`，再由该 profile 的 `cordis.patch.yml` 里 `- insert: wechat-hitl` 挂载（片段由 `dsh-wechat-hitl/tools/switch-hitl.mjs` 管理，路径跟随 `DSH_HOME`）。因此改代码后要**重新拷一次**到 profile，不像 `link:` 插件那样 `git pull` 即生效。装机与验收步骤见 [docs/bootstrap/PROMPT-新设备装机-引导.md](docs/bootstrap/PROMPT-新设备装机-引导.md) 第 5 步。
@@ -89,7 +89,7 @@ pwsh -File dsh-config-pack\scripts\update.ps1 -SkipOptional       # 不动可选
 
 ## DSH 收口备份与一键恢复
 
-「收口备份」= 把工作区（根仓库 + 全部子仓库）未提交的改动按显式路径提交，同时把**全部 profile** 打成一份可跨机恢复的 bundle；换机时用 `dsh-restore.ps1` 一键恢复。备份与恢复入口都在仓库根目录：
+「收口备份」= 把工作区（根仓库 + 全部子仓库）未提交的改动按显式路径提交，同时把**全部 profile** 打成一份可跨机恢复的 bundle；换机时用 `dsh-restore.ps1` 一键恢复。备份与恢复入口都在仓库根目录。脚本动态发现根目录下带 `.git` 的仓库（当前根 + 7 个子模块），工作区之外的兄弟检出（`D:\src\dsh-superagent`）用 `-IncludeSiblingRepos` 纳入、`focus-hub` 用 `-IncludeFocusHub` 纳入：
 
 ```powershell
 # 只盘点（不备份、不提交）
@@ -131,6 +131,8 @@ pwsh -NoProfile -File .\dsh-git-watchdog-register.ps1 -Remove
 ```
 
 work 组只做本地检查并提醒；personal/thirdparty 干净且落后时才受限快进，脏或领先则提醒管理人；引擎 drift/conflict 时完整 report-only。配置、提醒渠道、退出码与跨设备操作见 [git 巡检运维说明](docs/ops/git-watchdog.md)。
+
+Windows 快捷入口：`launch-superagent.cmd` 默认委托现有服务脚本启动 superagent 并打开管理页；`launch-superagent.cmd status` / `url` 可查询状态或地址。它不会构建代码或安装插件。新改动只有在子仓库成功推送、远端可读取该 SHA 后，才能更新并推送根仓库的子模块指针。
 
 ## 能力清单（逐组件：用途与 fix 原因）
 
@@ -242,7 +244,7 @@ dsh plugin --profile web add D:\src\dsh\dsh-plugin-new-session
 
 | 插件 | 版本 / 钉定 | 兼容 DSH | 启用位置 | 最近变更历史 |
 |---|---|---|---|---|
-| `dsh-config-pack` | 0.11.7 @ `71b2e1a` | peer base/web-app = 0.2.1-rc.5 | web、plugintest、superagent、packed | 0.11.7 多 profile bundle 与恢复；0.11.6 adapter/公共通道分表；2026-11-10 provider 字面量与旧设备变量迁移 |
+| `dsh-config-pack` | 0.11.7 @ `6e4ac9d` | peer base/web-app = 0.2.1-rc.5 | web、plugintest、superagent、packed | 0.11.7 多 profile bundle 与恢复；0.11.6 adapter/公共通道分表；2026-11-10 provider 字面量与旧设备变量迁移；2026-11-13 刷新模型目录并修正元数据说明 |
 | `dsh-deepseek-keypool`（仓库 `dsh-provider-failover`） | 3.8.3 @ `29c7309`（最新 tag v3.6.0） | 运行时验证 | web、plugintest、superagent、packed | 3.8.3 裸 HTTP/2 stream 失败恢复；3.8.2 原始错误与定时重试状态；3.8.0 设置页列出全部 key |
 | `@jiangdaoli/dsh-archived-sessions` | 0.4.4 @ `fffe92f` | peer 精确 0.2.1-rc.5 | web、plugintest、superagent | 0.4.4 重写 lockfile 通过 frozen install；0.4.3 peer/dev 升级到 0.2.1-rc.5；0.4.1 适配 DSH 0.2 |
 | `@local/dsh-plugin-sidebar-visibility` | 0.0.7 @ `64eda5c` | 运行时验证 | web | v0.0.7 未读亮点；v0.0.4 非当前会话运行行模型色；v0.0.3 rc.2 目录树与运行中转圈 |
@@ -256,7 +258,7 @@ dsh plugin --profile web add D:\src\dsh\dsh-plugin-new-session
 | `@local/dsh-preset-failover-tiers` | 0.1.0 @ `b373d1a` | 运行时验证 | web、plugintest | v0.1.0 便携档位表：模型族对齐 tier + transport-safe 终止码 |
 | `dsh-codex-cred-sync` | 1.0.0 @ `8f4586e` | 运行时验证 | web、plugintest | v0.1.0 同步 `llm-pi-ai/<provider>` 与 `~/.pi/agent/auth.json`，最新过期时间优先 |
 | `dsh-permission-compat` | 0.1.0 @ `a8e7e8b` | 0.2.1-rc.5 安装钉适配 | 带外工具，不挂 profile | 0.1.0 适配 0.2.1-rc.5 安装钉与诊断补丁 |
-| `dsh-superagent` | 0.1.0 @ `8c32a9d` | engines dsh `^0.2.1-alpha.2`，0.2.1-rc.5 满足 | 独立 profile `superagent`，端口 3082 | 初始研究原型；Windows `stateDir` 绝对路径补丁见 `docs/ops/superagent-profile.md`；恢复核实与设置补录见 `docs/ops/superagent-restore-20261110.md` |
+| `dsh-superagent` | 0.1.0 @ `c0b7df4`（维护 fork） | engines dsh `^0.2.1-alpha.2`，0.2.1-rc.5 满足 | 独立 profile `superagent`，端口 3082 | 2026-11-13 原有 Feishu 回复修复已推送维护 fork：私聊不带 reply-in-thread，前导 @ 避免 CLI 文件展开；不含缓存兜底；Windows `stateDir` 绝对路径补丁见 `docs/ops/superagent-profile.md`；恢复核实与设置补录见 `docs/ops/superagent-restore-20261110.md` |
 | `dsh-plugin-eye-care-bg` | 0.1.0（root 仓库跟踪） | 运行时验证（无 peer/engines 声明） | 仅 `superagent`（3082 面板） | 0.1.0 护眼页面底色 `#C7EDCC`：纯客户端 CSS 注入，覆盖主题令牌 `--dsw-alias-bg-base`，不注册端点、不持凭据 |
 | `dsh-wechat-hitl` | —（无 `.git`，目录副本） | 未验证 | 未在 web 挂载 | 需先初始化/登记仓库，再按 profile 目录副本方式安装 |
 | `dsh-chat-import` | 0.25.2（npm 最新 0.26.4） | peer dsh `>=0.1.5-rc.1` | web | 外部聊天记录导入，保留工具调用/推理/结果 |
@@ -292,7 +294,7 @@ dsh plugin --profile web add D:\src\dsh\dsh-plugin-new-session
 | 18 | `dshmarket` | 1.66.21 | 插件市场 | 运行时 |
 | 19 | `dsh-plugin-subagent-monitor` | 0.1.0 | 子代理/后台任务可见性 | 运行时 |
 | 20 | `dsh-plugin-subagent-director` | 0.6.0-beta.2 | 子代理 provider/model 调度 | 运行时 |
-| 21 | `dsh-config-pack` | 0.11.7 @ `71b2e1a` | profile patch 层、agent 预设、provider 路由、备份/恢复 | peer 精确 |
+| 21 | `dsh-config-pack` | 0.11.7 @ `6e4ac9d` | profile patch 层、agent 预设、provider 路由、备份/恢复 | peer 精确 |
 
 ### Profile 组合差异
 
