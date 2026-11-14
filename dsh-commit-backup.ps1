@@ -166,6 +166,38 @@ function Test-AnyPattern {
 	return $false
 }
 
+# git 在 core.quotepath=true 时给路径加引号并用 C 风格转义；少数含 " \ 或控制字符的路径即使
+# quotepath=false 也会被引用。旧实现用 -replace '\\','\' 试图还原，那在 .NET 里是"把反斜杠换成反斜杠"，
+# 等于什么都没做（\NNN 八进制从未被还原）。这里真正解码：\\ \" \t \n \r \b \f 与 \NNN。
+function ConvertFrom-GitQuotedPath {
+	param([Parameter(Mandatory)][string]$Value)
+	# git 的 \NNN 是 UTF-8 字节的八进制形式（如 \344\270\200 = 中），必须按字节收集后整体按 UTF-8 解码；
+	# 逐字节当 Unicode 码点会得到乱码（ä¸­）。
+	$s = $Value
+	if ($s.Length -ge 2 -and $s.StartsWith('"') -and $s.EndsWith('"')) { $s = $s.Substring(1, $s.Length - 2) }
+	$utf8 = New-Object System.Text.UTF8Encoding($false)
+	$bytes = New-Object System.Collections.Generic.List[byte]
+	$map = @{ }
+	$map[[string][char]92] = [byte]92
+	$map[[string][char]34] = [byte]34
+	$map['t'] = [byte]9
+	$map['n'] = [byte]10
+	$map['r'] = [byte]13
+	$map['b'] = [byte]8
+	$map['f'] = [byte]12
+	$i = 0
+	while ($i -lt $s.Length) {
+		$c = $s[$i]
+		if ($c -ne [char]92 -or $i -eq ($s.Length - 1)) { $bytes.AddRange($utf8.GetBytes([string]$c)); $i++; continue }
+		$n = [string]$s[$i + 1]
+		if ($map.ContainsKey($n)) { $bytes.Add($map[$n]); $i += 2; continue }
+		$m = [regex]::Match($s.Substring($i + 1), '^[0-7]{1,3}')
+		if ($m.Success) { $bytes.Add([byte][Convert]::ToInt32($m.Value, 8)); $i += 1 + $m.Length; continue }
+		$bytes.AddRange($utf8.GetBytes([string]$c)); $i++
+	}
+	return $utf8.GetString($bytes.ToArray())
+}
+
 function Get-GitLine {
 	param([string]$Repo, [string[]]$GitArgs)
 	$raw = & git -C $Repo @GitArgs 2>$null
@@ -276,8 +308,7 @@ function Get-RepoState {
 		$xy = $s.Substring(0, 2)
 		$path = $s.Substring(3)
 		if ($path.StartsWith('"') -and $path.EndsWith('"') -and $path.Length -ge 2) {
-			$path = $path.Substring(1, $path.Length - 2) -replace '\"', '"' -replace '\\', '\'
-			$path = $path -replace '\\', '\'
+			$path = ConvertFrom-GitQuotedPath -Value $path
 		}
 		if ($path -match ' -> ') { $path = ($path -split ' -> ')[-1] }
 
@@ -357,6 +388,9 @@ function Get-BundleInfo {
 	$info.Profiles = @($b.profiles).Count
 	$info.DefaultProfile = [string]$b.default_profile
 	$info.Invalid = @($b.profiles | Where-Object { [string]$_.status -ne 'ok' } | ForEach-Object { "$($_.profile)=$($_.status)" })
+	# completeness 与 status 是两件事：status=ok 只代表导出与清单检查通过；未做隔离安装演练时
+	# 每个 profile 仍是 partial。旧版只读 status，于是"全 partial 的 bundle"也报 ok，回执里看不到演练状态。
+	$info | Add-Member -NotePropertyName Partial -NotePropertyValue @($b.profiles | Where-Object { [string]$_.completeness -and [string]$_.completeness -ne 'complete' } | ForEach-Object { "$($_.profile)=$($_.completeness)" }) -Force
 	return $info
 }
 
@@ -396,7 +430,7 @@ function Invoke-DshBackup {
 	}
 
 	$info = Get-BundleInfo $bundle
-	$base = [ordered]@{ Bundle = $bundle; HasBundle = $info.Exists; Profiles = $info.Profiles; DefaultProfile = $info.DefaultProfile; Failed = $failedCount; Output = $text }
+	$base = [ordered]@{ Bundle = $bundle; HasBundle = $info.Exists; Profiles = $info.Profiles; DefaultProfile = $info.DefaultProfile; Completeness = $(if ($info.Exists) { $(if (@($info.Partial).Count -gt 0) { 'partial' } else { 'complete' }) } else { '' }); PartialProfiles = @($info.Partial); Failed = $failedCount; Output = $text }
 
 	if ($info.Exists) {
 		if ($info.Invalid.Count -gt 0 -or $failedCount -gt 0) {
@@ -405,7 +439,9 @@ function Invoke-DshBackup {
 			return [pscustomobject]$base
 		}
 		$base.Status = 'ok'
-		$base.Detail = "$name（$($info.Profiles) profile，默认 $($info.DefaultProfile)，bundle.json 校验通过）"
+		$partialNote = $(if (@($info.Partial).Count -gt 0) { "；completeness=partial（$(@($info.Partial).Count) 个 profile 未演练，恢复需 -AllowPartial）" } else { '；completeness=complete' })
+		$base.Detail = "$name（$($info.Profiles) profile，默认 $($info.DefaultProfile)，bundle.json 校验通过$partialNote）"
+		Write-Info "  完整性：$($base.Completeness)$(if (@($info.Partial).Count -gt 0) { '（未做隔离安装演练，属正常默认状态）' } else { '' })"
 		return [pscustomobject]$base
 	}
 
