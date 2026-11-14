@@ -2,6 +2,10 @@
 from common import safe_text
 
 LABEL={"reachable":"接口可达","online_degraded":"在线但降级","unknown":"状态未知","working":"执行中","idle":"空闲未结束","person":"待人工","ended":"已结束"}
+# What an operator does about a failed collection: the code alone does not say whether the host or the plugin is at fault.
+ERROR_HINT={"http_404":"该实例没有挂载 orchestrator 路由（插件未加载或正在重载），可用 /orchestrator/api/state 手工复核",
+            "auth_401":"接口要求鉴权或令牌无效","auth_403":"接口拒绝该身份",
+            "transport_or_schema":"连接失败或响应不是预期 JSON","response_budget":"响应超过读取上限"}
 
 def model_line(event):
     response=event.get("lastResponse")
@@ -14,7 +18,7 @@ def render(snapshot,kind="健康报告"):
     for item in snapshot["instances"]:
         lines += ["", "【"+item["id"]+"】"+LABEL.get(item["health"],item["health"])]
         if item.get("collectionError"):
-            lines.append("采集异常："+item["collectionError"]+"，工单与人工待办数量未知。")
+            lines.append("采集异常："+item["collectionError"]+"（"+ERROR_HINT.get(item["collectionError"],"未分类")+"），工单与人工待办数量未知。")
             continue
         lines += ["今日完成工单："+str(item["todayCompleted"])+"；未完成："+str(item["openTickets"])+"；工单待人工："+str(len(item["humanItems"])),
                   "今日有执行事件的关联会话："+str(item["activeManagedSessionsObserved"])+"（缺证据 "+str(item["missingSessionEvidence"])+"；仅主控/工单worker，子代理未证实完整覆盖）"]

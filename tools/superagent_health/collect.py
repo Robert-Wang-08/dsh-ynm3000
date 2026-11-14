@@ -1,5 +1,6 @@
 """Read-only collection of managed tickets, traceable reports and session events."""
 import json
+import time
 from datetime import datetime
 from pathlib import Path
 from urllib.request import Request, build_opener, HTTPRedirectHandler
@@ -7,21 +8,32 @@ from urllib.error import HTTPError, URLError
 from common import CST, instant, digest, safe_text
 from events import EventReader
 
+# A missing route and a gateway error both appear while a plugin or host reloads; one retry hides the window.
+RETRY_STATUSES = (404, 502, 503, 504)
+
 class NoRedirect(HTTPRedirectHandler):
     def redirect_request(self, *args, **kwargs):
         return None
 
-def get(url):
-    try:
-        with build_opener(NoRedirect).open(Request(url, headers={"x-orchestrator-request": "1"}), timeout=5) as response:
-            payload = response.read(16 * 1024 * 1024 + 1)
-            if len(payload) > 16 * 1024 * 1024:
-                return None, "response_budget"
-            return json.loads(payload), None
-    except HTTPError as exc:
-        return None, "auth_" + str(exc.code) if exc.code in (401,403) else "http_" + str(exc.code)
-    except (OSError, ValueError, URLError):
-        return None, "transport_or_schema"
+def get(url, attempts=1):
+    """Read one JSON answer; `attempts` retries a status a live plugin answers while it reloads."""
+    error = None
+    for attempt in range(attempts):
+        if attempt:
+            time.sleep(1.5)
+        try:
+            with build_opener(NoRedirect).open(Request(url, headers={"x-orchestrator-request": "1"}), timeout=5) as response:
+                payload = response.read(16 * 1024 * 1024 + 1)
+                if len(payload) > 16 * 1024 * 1024:
+                    return None, "response_budget"
+                return json.loads(payload), None
+        except HTTPError as exc:
+            error = "auth_" + str(exc.code) if exc.code in (401, 403) else "http_" + str(exc.code)
+            if exc.code not in RETRY_STATUSES:
+                return None, error
+        except (OSError, ValueError, URLError):
+            error = "transport_or_schema"
+    return None, error
 
 def tickets(base, state):
     result, ids, total, offset = [], set(), None, 0
@@ -61,7 +73,7 @@ def report_from_detail(detail, ticket_id, updated_at):
 
 def instance(config, item, now, reader):
     base = item["url"].rstrip("/") + "/orchestrator/api"
-    state, error = get(base + "/state")
+    state, error = get(base + "/state", attempts=2)
     if error or not isinstance(state, dict) or not isinstance(state.get("health"), dict):
         return {"id": item["id"], "health": "unknown", "collectionError": error or "schema", "tickets": [], "sessions": [], "humanItems": [], "quality": "unavailable", "observedAt": now.isoformat()}
     health = state["health"]
