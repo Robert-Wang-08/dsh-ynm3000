@@ -92,6 +92,8 @@ class EvidenceTests(unittest.TestCase):
         self.assertIn("- 工单：**t1** 语义本体工单 · 待人工",text)
         self.assertIn("- 问题：是否继续？",text)
         self.assertIn("- 原因：answer",text)
+        self.assertIn("完整报告：每两小时整点的「健康报告」",text)
+        self.assertIn("latest.md",text)
         self.assertNotIn("## 今日用量",text)
         self.assertEqual(text,report_text(snap,"待人工事项",issue))
 
