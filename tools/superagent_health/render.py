@@ -88,7 +88,7 @@ def render_attention(snapshot,kind,issue):
         lines.append("- 工单："+_ticket_line(ticket))
     elif ticket_id:
         lines.append("- 工单："+"**"+ticket_id[:8]+"**")
-    lines.append("- 问题："+safe_text(issue.get("question"),240))
+    lines.append("- 问题："+safe_text(issue.get("question"),400))
     lines.append("- 原因："+str(issue.get("reason") or "未标注"))
     lines.append("- 事项："+str(issue.get("id") or issue.get("issueId") or ""))
     lines.append("- 期限："+str(issue.get("deadline") or "未设置"))
