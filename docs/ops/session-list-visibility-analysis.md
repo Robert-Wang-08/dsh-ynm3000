@@ -92,3 +92,16 @@ superagent worker 的创建路径：
 - [勾选后：14 组，superagent 任务整体退出列表](../screenshots/superagent-task-filter/after-tasks-hidden.png)
 
 生效条件与限制：改动只影响插件增强树；官方「原始列表」模式仍显示 worker（与方案 D 的说明一致）。两个宿主（3080 web / 3082 superagent）都要重启 `dsh` 并刷新浏览器才会加载新 client bundle；本次未重启宿主。
+## 10. 新建会话工作区选择器过滤（2026-11-16，方案 A）
+
+用户反馈「新建会话时选择工作区」仍会列出 superagent 任务工作区。该列表是官方 `conversation.hero.workspace` 席位（`dsh-client-ui-workspace` 的 `WorkspacePicker`），数据直连 Host 的 `useWorkspaces`，插件层没有过滤入口。按用户选择采用方案 A：由插件接管该席位。
+
+- 插件以 priority -1 注册替换占用者（single 席位按 priority 升序取首个存活条目）；只在「隐藏任务」打开时接管，关闭即卸载、官方选择器原样接管。
+- 列表复用同一个 `isSuperagentWorkPath` 判定；`filterPickerWorkspaces()` 纯函数新增 3 项单测。
+- 取舍：接管版不依赖目录浏览器，「＋ 新建工作区…」改为输入绝对路径后调用 Host 的 `workspaces.create({ path })`；官方选择器的搜索 / 目录浏览在该模式下不可用。
+- 实测（web profile，隐藏任务打开）：选择器由 41 项降为 15 项，剩余项中无 `.dsh/state/superagent/work` 路径；关闭开关后官方选择器恢复。
+
+Before / After（只截菜单区域）：
+
+- [before：官方选择器，41 个工作区（含 superagent 任务）](../screenshots/superagent-task-filter/picker-before.png)
+- [after：插件接管，15 个可选工作区](../screenshots/superagent-task-filter/picker-after.png)
