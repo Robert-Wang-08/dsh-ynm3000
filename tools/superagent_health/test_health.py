@@ -9,11 +9,11 @@ from pathlib import Path
 from unittest.mock import patch
 from common import CST, instant, safe_text, digest
 from events import fold_events
-from collect import report_from_detail, tickets
+from collect import instance, report_from_detail, tickets
 from delivery import send, binding_id, DeliveryError
 from render import chunks, render, render_attention, report_text
 from store import Store
-from service import quiet, next_open, plan, dispatch, enqueue_report, tick
+from service import quiet, next_open, plan, dispatch, enqueue_report, settle_seconds, tick
 
 NOW=datetime(2026,11,12,14,0,tzinfo=CST)
 def event(kind,at,seq,data=None):
@@ -217,6 +217,129 @@ class ScheduleTests(unittest.TestCase):
                     plan(store,{"instances":[{"id":"test"}]},snap,NOW+timedelta(seconds=1))
                 self.assertEqual(first,store.stats())
             store.close()
+
+class AttentionTimingTests(unittest.TestCase):
+    """A pending question is announced only after the ticket has been quiet for a while."""
+    def setUp(self):
+        self.temp=tempfile.TemporaryDirectory()
+        self.store=Store(self.temp.name)
+        self.store.put("last_plan_at",(NOW-timedelta(minutes=1)).isoformat())
+        self.store.put("closed:"+(NOW-timedelta(days=1)).date().isoformat(),{"already":True})
+    def tearDown(self):
+        self.store.close()
+        self.temp.cleanup()
+
+    def snapshot(self, updated_at, issue=True):
+        snap=sample()
+        snap["instances"][0]["humanItems"]=[{"issueId":"test:t1:attention-1","revision":digest(["attention-1"]),
+            "ticketId":"t1","reason":"answer","question":"是否继续？","updatedAt":updated_at.isoformat()}] if issue else []
+        return snap
+
+    def plan_at(self, snap, at, settle=180, **config):
+        # A short window keeps the offsets readable; the 15-minute default is asserted on its own.
+        extra={} if settle is None else {"attention_settle_seconds":settle}
+        with patch("service.binding",return_value=("oc_target","cli","configdir")):
+            plan(self.store,{"instances":[{"id":"test"}],**extra,**config},snap,at)
+
+    def notices(self, kind="待人工事项"):
+        rows=self.store.db.execute("SELECT payload FROM outbox").fetchall()
+        return [payload for row in rows for payload in [json.loads(row["payload"])] if payload.get("kind")==kind]
+
+    def test_first_notice_waits_for_the_settle_window(self):
+        snap=self.snapshot(NOW)
+        self.plan_at(snap,NOW+timedelta(seconds=120))
+        self.assertEqual(self.notices(),[])
+        self.plan_at(snap,NOW+timedelta(seconds=185))
+        self.assertEqual(len(self.notices()),1)
+
+    def test_a_reply_restarts_the_window_instead_of_alerting(self):
+        self.plan_at(self.snapshot(NOW),NOW+timedelta(seconds=120))
+        replied=self.snapshot(NOW+timedelta(seconds=100))
+        self.plan_at(replied,NOW+timedelta(seconds=200))
+        self.assertEqual(self.notices(),[])
+        self.plan_at(replied,NOW+timedelta(seconds=290))
+        self.assertEqual(len(self.notices()),1)
+
+    def test_question_resolved_within_the_window_sends_nothing(self):
+        self.plan_at(self.snapshot(NOW),NOW+timedelta(seconds=60))
+        self.plan_at(self.snapshot(NOW,issue=False),NOW+timedelta(seconds=240))
+        self.assertEqual(self.notices(),[])
+
+    def test_old_pending_question_is_notified_on_first_sighting(self):
+        self.plan_at(self.snapshot(NOW-timedelta(minutes=10)),NOW)
+        self.assertEqual(len(self.notices()),1)
+
+    def test_updating_the_ticket_does_not_repeat_the_same_question(self):
+        self.plan_at(self.snapshot(NOW),NOW+timedelta(seconds=200))
+        self.assertEqual(len(self.notices()),1)
+        self.plan_at(self.snapshot(NOW+timedelta(seconds=300)),NOW+timedelta(seconds=400))
+        self.assertEqual(len(self.notices()),1)
+
+    def test_new_question_after_the_first_notice_is_announced(self):
+        self.plan_at(self.snapshot(NOW),NOW+timedelta(seconds=200))
+        self.assertEqual(len(self.notices()),1)
+        snap=sample()
+        snap["instances"][0]["humanItems"]=[{"issueId":"test:t1:attention-2","revision":digest(["attention-2"]),
+            "ticketId":"t1","reason":"answer","question":"下一步？","updatedAt":(NOW+timedelta(seconds=210)).isoformat()}]
+        self.plan_at(snap,NOW+timedelta(seconds=300))
+        self.assertEqual(len(self.notices()),1)
+        self.plan_at(snap,NOW+timedelta(seconds=400))
+        self.assertEqual(len(self.notices()),2)
+
+    def test_settle_follows_configuration(self):
+        self.assertEqual(settle_seconds({}),900)
+        self.assertEqual(settle_seconds({"attention_settle_seconds":0}),0)
+        self.assertEqual(settle_seconds({"attention_settle_seconds":"not-a-number"}),900)
+        self.assertEqual(settle_seconds({"attention_settle_seconds":-5}),0)
+        self.assertEqual(settle_seconds({"attention_settle_seconds":15*60}),900)
+        self.plan_at(self.snapshot(NOW),NOW,attention_settle_seconds=0)
+        self.assertEqual(len(self.notices()),1)
+
+    def test_default_window_is_fifteen_minutes(self):
+        snap=self.snapshot(NOW)
+        self.plan_at(snap,NOW+timedelta(seconds=899),settle=None)
+        self.assertEqual(self.notices(),[])
+        self.plan_at(snap,NOW+timedelta(seconds=901),settle=None)
+        self.assertEqual(len(self.notices()),1)
+
+    def test_legacy_state_keeps_the_same_question_quiet(self):
+        # States written before the settle window carry an older revision for the same waiting question.
+        self.store.enqueue("legacy-notice",{"text":"x"},now=1)
+        self.store.accepted("legacy-notice","om_old",now=(NOW+timedelta(seconds=10)).timestamp())
+        self.store.put("issues:test",{"test:t1:attention-1":{"episode":1,"active":True,"revision":"legacy","sentKey":"legacy-notice","reminders":0,"reminderDay":NOW.date().isoformat()}})
+        self.plan_at(self.snapshot(NOW),NOW+timedelta(seconds=300))
+        self.assertEqual(self.notices(),[])
+
+    def test_reminder_still_follows_an_accepted_notice(self):
+        self.plan_at(self.snapshot(NOW),NOW+timedelta(seconds=200))
+        row=self.store.db.execute("SELECT key FROM outbox WHERE state='pending'").fetchone()
+        self.store.accepted(row["key"],"om_receipt",now=(NOW+timedelta(seconds=200)).timestamp())
+        self.plan_at(self.snapshot(NOW),NOW+timedelta(minutes=35))
+        self.assertEqual(len(self.notices("待人工提醒")),1)
+
+
+class HumanItemIdentityTests(unittest.TestCase):
+    """Collecting a ticket that merely changed must not turn the same pending question into a new alert."""
+    def test_updated_ticket_keeps_revision_and_exposes_activity_time(self):
+        items=[{"id":"t1","title":"语义本体工单","stage":"person","action":"answer","updatedAt":"2026-11-12T06:00:00Z"}]
+        state={"health":{"api":{"state":"ok"}},"masterId":"master-1"}
+        class Reader:
+            def read(self,sid,day,now): return {}
+        def fake_get(url,attempts=1):
+            if url.endswith("/state"): return state,None
+            if "/tickets?state=open" in url: return {"items":items,"total":1,"next_offset":None},None
+            if "/tickets?state=ended" in url: return {"items":[],"total":0,"next_offset":None},None
+            if url.endswith("/tickets/t1"): return {"attention":{"id":"attention-1","question":"是否继续？"}},None
+            return None,"http_404"
+        with patch("collect.get",side_effect=fake_get):
+            first=instance({},{"id":"test","url":"http://127.0.0.1:3082"},NOW,Reader())
+            items[0]["updatedAt"]="2026-11-12T06:03:00Z"
+            second=instance({},{"id":"test","url":"http://127.0.0.1:3082"},NOW,Reader())
+        before,after=first["humanItems"][0],second["humanItems"][0]
+        self.assertEqual(before["revision"],after["revision"])
+        self.assertEqual(before["updatedAt"],"2026-11-12T06:00:00Z")
+        self.assertEqual(after["updatedAt"],"2026-11-12T06:03:00Z")
+
 
 class DispatchBoundaryTests(unittest.TestCase):
     def test_binding_change_never_sends_old_payload(self):
