@@ -4,6 +4,7 @@
 
 ## 行为
 
+- 桌面通知：PowerShell 7 在本机加载不了 WinRT 的 `Windows.UI.Notifications`，监督器自动改用 `powershell.exe`(5.1) 执行 `tools/feishu-toast.ps1`；成功时日志记 `submitted-via-5.1`，失败才记 `failed` 并保留原因。
 - Windows 用户任务 DSH-Feishu-Supervisor：经 `wscript.exe //B //Nologo` 启动无窗口 VBS，再由它在隐藏窗口里运行 PowerShell；每5分钟一次，加用户登录触发、StartWhenAvailable、IgnoreNew、最长4分钟，允许电池运行。2026-11-16 修复：最初直接以 `pwsh.exe` 作任务动作会闪现控制台窗口，现改为隐藏启动器并保留子进程退出码。
 - 30秒心跳阈值，采样相隔6秒；核对入口完整路径、PID、创建时间（允许 JS 启动时间落后 OS 创建时间10秒）、seq/tick推进、入站子进程与父进程。
 - 只有心跳过阈值、进程完整枚举成功且确无目标 daemon，才有资格 Repair；启动前再次观察，start 脚本再次枚举。全程没有 stop/restart 调用。
