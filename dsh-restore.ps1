@@ -1,7 +1,7 @@
 #!/usr/bin/env pwsh
 <#
 .SYNOPSIS
-  DSH 一键恢复 v1.0.0 —— 从「DSH 收口备份」的 bundle 恢复全部 profile（默认只出计划）。
+  DSH 一键恢复 v1.1.0 —— 从「DSH 收口备份」的 bundle 恢复全部 profile（默认只出计划）。
 
 .DESCRIPTION
   「DSH 收口备份」在 %USERPROFILE%\.dsh\backups 下产出 dsh-backup-<时间戳>\（bundle = 多 profile）。
@@ -63,13 +63,18 @@ param(
 	[switch]$AcceptEngineDrift,
 	[switch]$List,
 	[string]$BackupScript = '',
-	[string]$DshHome = ''
+	[string]$DshHome = '',
+	[string]$PluginManifest = '',
+	[string]$PluginProfile = 'web',
+	[string]$WorkspaceRoot = $PSScriptRoot,
+	[string]$RepoMap = '',
+	[switch]$HostStopped
 )
 
 $ErrorActionPreference = 'Stop'
 $PSNativeCommandUseErrorActionPreference = $false
 
-$ScriptVersion = '1.0.0'
+$ScriptVersion = '1.1.0'
 
 function Write-Head { param([string]$Text) Write-Host ''; Write-Host "──── $Text ────" -ForegroundColor Cyan }
 function Write-Info { param([string]$Text) Write-Host "  $Text" }
@@ -84,6 +89,19 @@ $DshRoot = if (-not [string]::IsNullOrWhiteSpace($DshHome)) { [IO.Path]::GetFull
 	elseif ($env:DSH_HOME) { [IO.Path]::GetFullPath($env:DSH_HOME) }
 	else { Join-Path $UserHome '.dsh' }
 $BackupRoot = Join-Path $DshRoot 'backups'
+
+# Portable plugin reconciliation is separate from snapshot file replacement.
+if ($PluginManifest) {
+	if ($Snapshot -or $List) { throw 'PluginManifest cannot be combined with Snapshot/List' }
+	if ($PluginProfile -notmatch '^[a-zA-Z0-9_-]+$') { throw 'Invalid PluginProfile' }
+	$pluginDir = Join-Path (Join-Path $DshRoot 'profiles') $PluginProfile
+	$mode = if ($Apply) { 'apply' } else { 'plan' }
+	$syncArgs = @((Join-Path $PSScriptRoot 'scripts/plugin-sync.mjs'), $mode, '--profile', $pluginDir, '--workspace', $WorkspaceRoot, '--manifest', $PluginManifest, '--profile-name', $PluginProfile, '--dsh-home', $DshRoot)
+	if ($RepoMap) { $syncArgs += @('--map', $RepoMap) }
+	if ($HostStopped) { $syncArgs += '--host-stopped' }
+	& node @syncArgs
+	exit $LASTEXITCODE
+}
 
 function Resolve-BackupScript {
 	if (-not [string]::IsNullOrWhiteSpace($BackupScript)) { return $BackupScript }
@@ -175,7 +193,9 @@ if ($okEntries.Count -eq 0) {
 Write-Head '跨机路径体检（link: 依赖）'
 $missingLinks = New-Object System.Collections.Generic.List[object]
 foreach ($entry in $okEntries) {
-	$pkgPath = Join-Path (Join-Path (Join-Path $Snapshot 'profiles') ([string]$entry.profile)) 'package.json'
+	$profileSnapshot = Join-Path (Join-Path $Snapshot 'profiles') ([string]$entry.profile)
+	$pkgPath = Join-Path $profileSnapshot 'files/profile/package.json'
+	if (-not (Test-Path -LiteralPath $pkgPath)) { $pkgPath = Join-Path $profileSnapshot 'package.json' }
 	if (-not (Test-Path -LiteralPath $pkgPath)) { continue }
 	$pkg = $null
 	try { $pkg = Get-Content -LiteralPath $pkgPath -Raw -Encoding utf8 | ConvertFrom-Json } catch { continue }
@@ -183,6 +203,8 @@ foreach ($entry in $okEntries) {
 	foreach ($dep in $pkg.dependencies.PSObject.Properties) {
 		if ([string]$dep.Value -notlike 'link:*') { continue }
 		$target = ([string]$dep.Value).Substring(5)
+		$profileBase = Join-Path (Join-Path $DshRoot 'profiles') ([string]$entry.profile)
+		if (-not [IO.Path]::IsPathRooted($target)) { $target = [IO.Path]::GetFullPath((Join-Path $profileBase $target)) }
 		if (-not (Test-Path -LiteralPath $target)) {
 			$missingLinks.Add([pscustomobject]@{ Profile = [string]$entry.profile; Dependency = $dep.Name; Target = $target })
 		}

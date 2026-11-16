@@ -87,6 +87,10 @@ pwsh -File dsh-config-pack\scripts\update.ps1 -SkipOptional       # 不动可选
 
 边界：设备个人答案与密钥不动（密钥只在用户环境变量）；云盘 `route-config.json` / 个人答案有变更时用 `pwsh scripts/setup.ps1 -UpdateRoutes` 同步路由；源设备 `web` 这类 link: 开发态 profile，`git pull` + 重启即生效，不走本流程。
 
+## 双向插件清单同步
+
+A/B 使用不同克隆目录时，用可移植清单交换包名、版本与 bundle 顺序，接收机保留自己的 link 路径。入口：`dsh-restore.ps1 -PluginManifest <清单>`（默认计划）；执行需停宿主并加 `-Apply -HostStopped`。不覆盖目标独有插件，冲突非零退出。导出、映射、回滚和验收见 [双向插件同步操作说明](docs/ops/plugin-sync.md)。
+
 ## DSH 收口备份与一键恢复
 
 「收口备份」= 把工作区（根仓库 + 全部子仓库）未提交的改动按显式路径提交，同时把**全部 profile** 打成一份可跨机恢复的 bundle；换机时用 `dsh-restore.ps1` 一键恢复。备份与恢复入口都在仓库根目录。脚本动态发现根目录下带 `.git` 的仓库（当前根 + 7 个子模块），工作区之外的兄弟检出（`D:\src\dsh-superagent`）用 `-IncludeSiblingRepos` 纳入、`focus-hub` 用 `-IncludeFocusHub` 纳入：
