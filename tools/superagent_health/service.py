@@ -11,7 +11,7 @@ from pathlib import Path
 from common import CST, digest, load_config, atomic_text
 from collect import collect
 from delivery import send, binding, binding_id, DeliveryError
-from render import render, chunks
+from render import report_text, render, chunks
 from store import Store
 
 @contextmanager
@@ -58,7 +58,7 @@ def enqueue_report(store,config,snapshot,key,kind,urgent=False,issue=None):
     fingerprint=binding_id(config,resolved)
     now=datetime.fromisoformat(snapshot["collectedAt"])
     group=digest([fingerprint,key,config["instances"]])
-    parts=chunks(render(snapshot,kind))
+    parts=chunks(report_text(snapshot,kind,issue))
     available=now.timestamp() if urgent else max(next_open(now,config),snapshot.get("notBefore",0))
     entries=[]
     for index,text in enumerate(parts):
@@ -120,7 +120,7 @@ def plan(store,config,snapshot,now):
             if not state["active"] or state["revision"]!=issue["revision"]:
                 state["episode"]+=1
                 key=ident+":"+str(state["episode"])+":"+issue["revision"]
-                group=enqueue_report(store,config,snapshot,key,"待人工事项",issue={"id":ident,"revision":issue["revision"],"instanceId":item["id"]})
+                group=enqueue_report(store,config,snapshot,key,"待人工事项",issue={"id":ident,"revision":issue["revision"],"issueId":ident,"instanceId":item["id"],"ticketId":issue.get("ticketId"),"question":issue.get("question"),"reason":issue.get("reason"),"deadline":issue.get("deadline")})
                 state.update(active=True,revision=issue["revision"],sentKey=group+"-1",reminders=0,reminderDay=now.date().isoformat())
             if state.get("reminderDay")!=now.date().isoformat():
                 state.update(reminderDay=now.date().isoformat(),reminders=0)
@@ -128,7 +128,7 @@ def plan(store,config,snapshot,now):
             delay=1800 if state["reminders"]==0 else 7200
             if accepted and not quiet(now,config) and state["reminders"]<3 and now.timestamp()-accepted>=delay:
                 ordinal=state["reminders"]+1
-                group=enqueue_report(store,config,snapshot,ident+":remind:"+str(state["episode"])+":"+state["revision"]+":"+now.date().isoformat()+":"+str(ordinal),"待人工提醒",issue={"id":ident,"revision":issue["revision"],"instanceId":item["id"]})
+                group=enqueue_report(store,config,snapshot,ident+":remind:"+str(state["episode"])+":"+state["revision"]+":"+now.date().isoformat()+":"+str(ordinal),"待人工提醒",issue={"id":ident,"revision":issue["revision"],"issueId":ident,"instanceId":item["id"],"ticketId":issue.get("ticketId"),"question":issue.get("question"),"reason":issue.get("reason"),"deadline":issue.get("deadline")})
                 state.update(sentKey=group+"-1",reminders=ordinal)
             known[ident]=state
         for ident,state in known.items():
