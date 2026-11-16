@@ -91,6 +91,10 @@ skillhub-source: not-managed
      dsh plugin --profile <profile> add <仓库根>\dsh-plugin-new-session
      ```
      逐个 add：参数顺序即 bundle 顺序，不要与 config-pack 混在同一次调用里。
+      **目标机克隆路径与源设备不同时，优先用双向清单同步，不要手工猜路径**：源设备
+      `node scripts/plugin-sync.mjs export --profile <profile 目录> --workspace <仓库根> --out plugins.json`，
+      目标机 `pwsh -File <仓库根>\dsh-restore.ps1 -PluginManifest plugins.json` 先看计划，停宿主后加
+      `-Apply -HostStopped`。完整步骤、`-RepoMap` 设备映射与回滚见 [双向插件同步操作说明](../ops/plugin-sync.md)。
      登记后 `git -C <仓库根> pull` 即更新这些插件，**不需要重新 add**。
      确认方法：`dsh plugin --profile <profile> list` 里能看到它们，且
      `dsh --profile <profile> --dump-config` 无 `patch: entry ... not found`。
@@ -145,8 +149,9 @@ skillhub-source: not-managed
     - **默认 profile 不变**：`bundle.json` 只记录 `default_profile`（源设备是 `web`），恢复后照旧
       `dsh web` 启动；不会把默认切到 `packed` 或别的 profile。
     - 每个 profile 仍是标准 `dsh-snapshot/v1`，可单独重放：`restore -Snapshot <bundle>\profiles\<profile>`。
-    - `link:` 依赖仍指向源设备检出路径——目标设备仓库克隆路径必须一致，否则按第 5 步重新
-      `dsh plugin add`（已知跨设备差异，不是快照缺陷）。
+    - `link:` 依赖仍指向源设备检出路径。**2026-11-16 起不再要求两台机器克隆路径一致**：
+      用双向插件清单同步（`dsh-restore.ps1 -PluginManifest <清单>`）按目标机自己的目录重新解析，
+      见 [双向插件同步操作说明](../ops/plugin-sync.md)。手工逐个 `dsh plugin add`（第 5 步）仍是兜底路径。
     - **写回前先停目标设备上正在跑的 `dsh web`**，避免热重载层栈打断正在进行的会话回合。
     - 仓库根目录的 `dsh-restore.ps1` 是上面两步的封装（自动取最新 bundle、写回前体检 `link:` 路径、
       写回后打印验收步骤），换机时推荐直接用它：
