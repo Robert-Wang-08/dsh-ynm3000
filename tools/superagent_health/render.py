@@ -9,7 +9,7 @@ from common import safe_text
 
 LABEL={"reachable":"接口可达","online_degraded":"在线但降级","unknown":"状态未知","working":"执行中","idle":"空闲未结束","person":"待人工","ended":"已结束"}
 # One-line pointer back to the full report, so a focused attention notice is not a dead end.
-REPORT_HINT="完整报告：每两小时整点的「健康报告」消息；本机快照 `~/.dsh/state/superagent-health/latest.md`。"
+REPORT_HINT="完整报告：每两小时整点的「健康报告」消息；本机快照 `%USERPROFILE%\\.dsh\\state\\superagent-health\\latest.md`。"
 # What an operator does about a failed collection: the code alone does not say whether the host or the plugin is at fault.
 ERROR_HINT={"http_404":"该实例没有挂载 orchestrator 路由（插件未加载或正在重载），可用 /orchestrator/api/state 手工复核",
             "auth_401":"接口要求鉴权或令牌无效","auth_403":"接口拒绝该身份",
