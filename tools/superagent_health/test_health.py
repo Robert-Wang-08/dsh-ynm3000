@@ -13,7 +13,7 @@ from collect import report_from_detail, tickets
 from delivery import send, binding_id, DeliveryError
 from render import chunks, render, render_attention, report_text
 from store import Store
-from service import quiet, next_open, plan, dispatch, enqueue_report
+from service import quiet, next_open, plan, dispatch, enqueue_report, tick
 
 NOW=datetime(2026,11,12,14,0,tzinfo=CST)
 def event(kind,at,seq,data=None):
@@ -92,13 +92,24 @@ class EvidenceTests(unittest.TestCase):
         self.assertIn("- 工单：**t1** 语义本体工单 · 待人工",text)
         self.assertIn("- 问题：是否继续？",text)
         self.assertIn("- 原因：answer",text)
-        self.assertIn("完整报告：每两小时整点的「健康报告」",text)
-        self.assertIn("latest.md",text)
+        self.assertIn("完整待人工事项报告",text)
+        self.assertIn("latest-attention.md",text)
+        self.assertIn("每两小时整点的「健康报告」",text)
         self.assertNotIn("## 今日用量",text)
         self.assertEqual(text,report_text(snap,"待人工事项",issue))
 
     def test_health_report_is_not_replaced_by_attention_renderer(self):
         self.assertEqual(render(sample()),report_text(sample(),"健康报告",None))
+
+    def test_tick_writes_full_attention_snapshot(self):
+        with tempfile.TemporaryDirectory() as directory:
+            config={"state_dir":directory,"instances":[{"id":"test"}]}
+            with patch("service.collect",return_value=sample()):
+                tick(config,allow_send=False)
+            text=(Path(directory)/"latest-attention.md").read_text(encoding="utf-8")
+            self.assertTrue(text.startswith("# Superagent · 待人工事项"))
+            self.assertIn("## 【test】接口可达",text)
+            self.assertIn("## 今日用量",text)
 
 class OutboxTests(unittest.TestCase):
     def setUp(self):

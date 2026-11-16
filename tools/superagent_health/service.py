@@ -184,6 +184,8 @@ def tick(config,allow_send=False):
             store.put("last_snapshot",snapshot)
             atomic_text(directory/"latest.json",json.dumps(snapshot,ensure_ascii=False,indent=2))
             atomic_text(directory/"latest.md",render(snapshot))
+            # The full attention snapshot, so a focused 待人工事项 notice still has a full-report address.
+            atomic_text(directory/"latest-attention.md",render(snapshot,"待人工事项"))
             if allow_send:
                 binding(config)
                 plan(store,config,snapshot,datetime.now(CST))
