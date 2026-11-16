@@ -11,9 +11,9 @@ from common import CST, instant, safe_text, digest
 from events import fold_events
 from collect import report_from_detail, tickets
 from delivery import send, binding_id, DeliveryError
-from render import chunks, render
+from render import chunks, render, render_attention, report_text
 from store import Store
-from service import quiet, next_open, plan, dispatch, enqueue_report
+from service import quiet, next_open, plan, dispatch, enqueue_report, tick
 
 NOW=datetime(2026,11,12,14,0,tzinfo=CST)
 def event(kind,at,seq,data=None):
@@ -75,6 +75,41 @@ class EvidenceTests(unittest.TestCase):
         self.assertTrue(all(len(p)<=3500 for p in parts))
         self.assertEqual("".join(p.replace(chr(10),"") for p in parts),text.replace(chr(10),""))
         self.assertIn("今日有执行事件",render(sample()))
+
+    def test_renderer_uses_markdown_sections_and_lists(self):
+        text=render(sample())
+        self.assertTrue(text.startswith("# Superagent · 健康报告"))
+        self.assertIn("## 【test】接口可达",text)
+        self.assertIn("- 今日完成工单：1",text)
+        self.assertIn("- 工单待人工：0",text)
+
+    def test_attention_notice_is_a_short_list_not_the_whole_report(self):
+        snap=sample()
+        snap["instances"][0]["tickets"]=[{"id":"t1","title":"语义本体工单","stage":"person","recap":{"text":"等待决定","quality":"worker_report_not_independently_verified"}}]
+        issue={"id":"test:t1:attention","issueId":"test:t1:attention","revision":"r1","instanceId":"test","ticketId":"t1","question":"是否继续？","reason":"answer","deadline":None}
+        text=render_attention(snap,"待人工事项",issue)
+        self.assertTrue(text.startswith("# Superagent · 待人工事项"))
+        self.assertIn("- 工单：**t1** 语义本体工单 · 待人工",text)
+        self.assertIn("- 问题：是否继续？",text)
+        self.assertIn("- 原因：answer",text)
+        self.assertIn("完整待人工事项报告",text)
+        self.assertIn("latest-attention.md",text)
+        self.assertIn("每两小时整点的「健康报告」",text)
+        self.assertNotIn("## 今日用量",text)
+        self.assertEqual(text,report_text(snap,"待人工事项",issue))
+
+    def test_health_report_is_not_replaced_by_attention_renderer(self):
+        self.assertEqual(render(sample()),report_text(sample(),"健康报告",None))
+
+    def test_tick_writes_full_attention_snapshot(self):
+        with tempfile.TemporaryDirectory() as directory:
+            config={"state_dir":directory,"instances":[{"id":"test"}]}
+            with patch("service.collect",return_value=sample()):
+                tick(config,allow_send=False)
+            text=(Path(directory)/"latest-attention.md").read_text(encoding="utf-8")
+            self.assertTrue(text.startswith("# Superagent · 待人工事项"))
+            self.assertIn("## 【test】接口可达",text)
+            self.assertIn("## 今日用量",text)
 
 class OutboxTests(unittest.TestCase):
     def setUp(self):
@@ -142,6 +177,8 @@ class DeliveryTests(unittest.TestCase):
                 self.assertEqual(send({},"private body","stable-key",runner=run),"om_r")
                 argv=run.call_args.args[0]
                 self.assertIn("--idempotency-key",argv)
+                self.assertIn("--markdown",argv)
+                self.assertNotIn("--text",argv)
                 self.assertNotIn("private body",argv)
                 self.assertEqual(run.call_args.kwargs["input"],"private body")
 

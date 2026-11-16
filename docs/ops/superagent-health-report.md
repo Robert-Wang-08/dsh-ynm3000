@@ -1,6 +1,6 @@
 # Superagent 定期健康报告：运行、绑定与回滚
 
-实现位于 [服务目录](../../tools/superagent_health/)。这是仓库脚本服务，不是新DSH插件，不需要改profile或重启宿主。当前实现版本：1（2026-11-12）。
+实现位于 [服务目录](../../tools/superagent_health/)。这是仓库脚本服务，不是新DSH插件，不需要改profile或重启宿主。当前实现版本：2（2026-11-16）。
 
 ## 已实现行为
 
@@ -11,6 +11,7 @@
 - 每分钟采样；09/11/13/15/17/19简报，21:05未闭账日报；次日生成前一自然日执行窗口闭账并在09:00后投递。历史闭账里的工单当前状态仍标本次采集时间，不声称复原历史状态。
 - 连续3次不可采集后告警；连续2次成功后恢复。组件error按变化告警；正常sourceOff/localMode不算宕机。
 - 新人工事项通知；渠道首次接受30分钟后提醒，之后2小时，最多3次/自然日工作时段。完成的权威工单不因旧ready报告重新变待办。
+- 报告正文按 Markdown 渲染（标题、列表、加粗、分段），通过 `lark-cli im +messages-send --markdown` 转为飞书富文本 post；健康报告与待人工事项/提醒共用同一套渲染。待人工事项/提醒只列本次要决定的事项（工单、问题、原因、期限），不再重复整份健康报告，并在末尾用一行提示完整报告的位置：完整待人工事项快照 `%USERPROFILE%\.dsh\state\superagent-health\latest-attention.md`，飞书全量报告见每两小时整点的「健康报告」消息（同内容）。
 - SQLite outbox持久化；整份多页报告一次事务入队，避免崩溃后只排入半份报告；唯一key去重、90秒发送租约、超时/崩溃后unknown_delivery、失败退避。消息含report ID，CLI传同一idempotency key。渠道接受凭message_id确认，不声称已读或exactly-once。超过6小时或永久权限错误停留needs_attention，不悄悄丢弃。
 - 22–08普通消息静默，重试也遵守静默；严重接口失联可绕过。独立采集步骤写私有快照，发送不会写业务状态。
 
@@ -37,7 +38,7 @@ node "$env:DSH_PROGRESS_CLI" run --task health-dry-run -- python tools/superagen
 
 单次dry-run只生成本地快照，不排队、不发送消息。运行数据默认放用户目录下.dsh/state/superagent-health，包括health.sqlite、latest.json、latest.md、heartbeat.json。包含工单标题/摘要和本地缓存路径，属于私有运行数据，不提交、不公开分享。基础脱敏覆盖常见key/ID/路径格式，不是通用敏感信息检测器；只有核实授权的管理人可收报告。
 
-测试覆盖28个证据/投递/调度场景（含多页事务回滚、事项旧版本作废、采集失败不误销项、相同收件人换bot拒发、静默期重试、前日闭账时间）：跨午夜、未来事件排除、请求别名与响应模型、缺usage不算免费、recap来源、认证失败与零数据区分、分页漂移、重复enqueue、双执行者租约、ack前崩溃、发送超时、永久错误、CLI未返回message_id、静默期与重复tick。
+测试覆盖32个证据/投递/调度场景（含富文本渲染、待人工短通知与完整待人工快照、多页事务回滚、事项旧版本作废、采集失败不误销项、相同收件人换bot拒发、静默期重试、前日闭账时间）：跨午夜、未来事件排除、请求别名与响应模型、缺usage不算免费、recap来源、认证失败与零数据区分、分页漂移、重复enqueue、双执行者租约、ack前崩溃、发送超时、永久错误、CLI未返回message_id、静默期与重复tick。
 
 ## 收件人绑定（真实发送前）
 
@@ -79,7 +80,7 @@ pwsh tools/superagent_health/manage.ps1 install -AllowSend
 pwsh tools/superagent_health/manage.ps1 start
 ~~~
 
-CLI通过stdin接收报告文字，避免正文出现在进程命令行；仅message_id确认后才记channel_accepted。不得把排队成功当送达成功。历史未知投递使用相同key有限重试；服务器幂等有效期受渠道约束，因此不能承诺无限期去重。
+CLI通过stdin接收报告Markdown，以`--markdown`发送富文本post，避免正文出现在进程命令行；仅message_id确认后才记channel_accepted。不得把排队成功当送达成功。历史未知投递使用相同key有限重试；服务器幂等有效期受渠道约束，因此不能承诺无限期去重。
 
 停用或回滚：
 

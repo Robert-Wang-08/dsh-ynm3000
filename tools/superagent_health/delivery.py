@@ -31,8 +31,10 @@ def binding_id(config, resolved):
 def send(config,text,key,runner=subprocess.run):
     recipient,cli,directory=binding(config)
     env={**os.environ,"LARKSUITE_CLI_CONFIG_DIR":directory,"NO_COLOR":"1","LARKSUITE_CLI_NO_UPDATE_NOTIFIER":"1","LARKSUITE_CLI_NO_SKILLS_NOTIFIER":"1"}
+    # --markdown lets lark-cli render headings, bullets and bold as a Feishu
+    # rich-text post; the report is written as Markdown in render.py.
     # stdin avoids exposing report text to process command-line inspection.
-    argv=[cli,"im","+messages-send","--chat-id",recipient,"--text","-","--as","bot","--idempotency-key",key,"--format","json"]
+    argv=[cli,"im","+messages-send","--chat-id",recipient,"--markdown","-","--as","bot","--idempotency-key",key,"--format","json"]
     try:
         result=runner(argv,input=text,text=True,encoding="utf-8",capture_output=True,timeout=30,env=env)
     except subprocess.TimeoutExpired:
