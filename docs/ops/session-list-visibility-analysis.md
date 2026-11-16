@@ -76,3 +76,32 @@ superagent worker 的创建路径：
 
 - 过滤是客户端派生视图，Host 数据（`workspace.json` / `archivedSessionIds`）不变；换 GUI 或换插件列表模式仍旧可见（官方 WorkspaceBrowser 也照旧过滤 subagent，但会显示 worker）。
 - 本机同时存在 3080（web）与 3082（superagent）两个宿主，任一宿主的改动只对该宿主的页面生效，要两边都刷。
+
+## 9. 实现（2026-11-13，方案 D 落地）
+
+已在插件 `dsh-plugin-sidebar-visibility` 落地「隐藏任务」开关（commit `7944884`，`main`）：
+
+- `src/client/superagent-filter.ts`：新增纯函数 `isSuperagentWorkPath` / `isWorkerSessionId` / `isSuperagentTaskSession`，只认 `/.dsh/state/superagent/work` 路径段（Windows 反斜杠、大小写不敏感、目录边界匹配），不依赖用户名或盘符。
+- `src/client/visibility-store.ts`：偏好新增 `hideSuperagentTasks`（默认 false，沿用 `dsh.sidebar-visibility.v1` 单键）。
+- `src/client/WorkspaceTree.tsx`：树顶「隐藏任务」勾选框；打开后 `visibleSession()` 过滤 `worker-*` 会话，`visibleWorkspaces` 过滤 work 工作区，分组 / 目录树 / 平铺 / 检索 / 置顶区一致生效；关闭立即恢复。
+- 测试：`node scripts/test-superagent-filter.mjs`（13 项）、`test-hierarchy.mjs`（26 项）、`test-bundle.mjs` 全过；`pnpm run bundle` 产物已入库。
+
+本机实测（web profile，1440×2600 同视口、同一浏览器会话；会话标题已模糊）：勾选前 36 个工作区分组（其中 22 个 `.dsh/state/superagent/work/*`），勾选后 14 组，`worker-*` 会话与 work 工作区全部消失；取消勾选立即恢复（DOM 计数 36 ↔ 14）。
+
+- [勾选前：36 组，worker 会话与任务工作区可见](../screenshots/superagent-task-filter/before-worker-visible.png)
+- [勾选后：14 组，superagent 任务整体退出列表](../screenshots/superagent-task-filter/after-tasks-hidden.png)
+
+生效条件与限制：改动只影响插件增强树；官方「原始列表」模式仍显示 worker（与方案 D 的说明一致）。两个宿主（3080 web / 3082 superagent）都要重启 `dsh` 并刷新浏览器才会加载新 client bundle；本次未重启宿主。
+## 10. 新建会话工作区选择器过滤（2026-11-16，方案 A）
+
+用户反馈「新建会话时选择工作区」仍会列出 superagent 任务工作区。该列表是官方 `conversation.hero.workspace` 席位（`dsh-client-ui-workspace` 的 `WorkspacePicker`），数据直连 Host 的 `useWorkspaces`，插件层没有过滤入口。按用户选择采用方案 A：由插件接管该席位。
+
+- 插件以 priority -1 注册替换占用者（single 席位按 priority 升序取首个存活条目）；只在「隐藏任务」打开时接管，关闭即卸载、官方选择器原样接管。
+- 列表复用同一个 `isSuperagentWorkPath` 判定；`filterPickerWorkspaces()` 纯函数新增 3 项单测。
+- 取舍：接管版不依赖目录浏览器，「＋ 新建工作区…」改为输入绝对路径后调用 Host 的 `workspaces.create({ path })`；官方选择器的搜索 / 目录浏览在该模式下不可用。
+- 实测（web profile，隐藏任务打开）：选择器由 41 项降为 15 项，剩余项中无 `.dsh/state/superagent/work` 路径；关闭开关后官方选择器恢复。
+
+Before / After（只截菜单区域）：
+
+- [before：官方选择器，41 个工作区（含 superagent 任务）](../screenshots/superagent-task-filter/picker-before.png)
+- [after：插件接管，15 个可选工作区](../screenshots/superagent-task-filter/picker-after.png)
