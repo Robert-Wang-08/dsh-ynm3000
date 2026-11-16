@@ -143,7 +143,7 @@ Windows 快捷入口：`launch-superagent.cmd` 默认委托现有服务脚本启
 | `dsh-provider-failover`（发布包名 `dsh-deepseek-keypool`） | 3.8.3 | **provider 故障转移路由**：四档 tier（codex-relay → openai-codex → ais/opencode-go → kimi），QUOTA/AUTH/限流/传输错误自动切下一档，每回合最多 6 次；挂 notice 通知 | 近期 fix：隔离 base route 观察避免误判 failover 目标（e3beef1）、补通知客户端渲染回归并记录「通知不可回看」已知缺口 |
 | `@local/dsh-subagent-acp-resilient` | 0.2.3 | 上游 ACP 子代理的**替换实现** | 自写原因：上游在慢响应时误判空闲超时、超时诊断被丢弃、已改文件对模型不可见——本实现给分级超时阶梯（进程 30s/建立 60s/空闲 3min/普软硬 10-20min/复杂 20-45min，`PTC_ACP_*` 可覆盖）+ `guardWorkspaceReuse` + 修 HTTP/1.1 |
 | 外部 CLI 调用（ACP 子代理 + 派发工具） | — | 会话里可直接把 **cursor-agent、opencode、kimi、codex（official）** 等本机 CLI 当子代理用：`DSHPACK_ACP_OPENCODE/KIMI/CURSOR` 开关 + `tool/ptc-dispatch` 派发，由 subagent 路由选人（面板徽标显示实际路由） | ⚠️ CLI 长任务**等待容易超时**——已有分级超时阶梯缓解，超时时诊断与已改文件仍会回传模型，但重型任务建议拆小或转后台 |
-| `dsh-plugin-sidebar-visibility` | 0.0.7 | Web 侧栏九项增强：工作区隐藏/折叠/拖拽排序、工作区行新建会话、会话重命名/分叉/归档、收藏+仅收藏筛选、运行中转圈标识、插件列表↔原始列表热切换、Provider 挂起/恢复 | 状态持久化在 localStorage 单键，与官方侧栏同一惯例；官方无这些 API，天然做成本地视图 |
+| `dsh-plugin-sidebar-visibility` | 0.0.9 | Web 侧栏增强：工作区隐藏/折叠/拖拽排序、工作区行新建会话、会话重命名/分叉/归档、收藏+仅收藏筛选、superagent 任务隐藏（worker 会话 + work 工作区）、新建会话工作区选择器过滤、运行中转圈标识、插件列表↔原始列表热切换、Provider 挂起/恢复 | 状态持久化在 localStorage 单键，与官方侧栏同一惯例；官方无这些 API，天然做成本地视图 |
 | `dsh-plugin-provider-badge` | 0.4.0 | 模型选择器前的 provider 徽标（颜色 swatch 与文字分离，不依赖颜色辨识）。composer 实拍：![badge](https://raw.githubusercontent.com/Robert-Wang-08/dsh-plugin-provider-badge/master/docs/screenshots/badge-composer.png) | — |
 | `dsh-plugin-subagent-monitor` | 0.1.0 | 会话头部「子代理 N」面板：类型徽标**优先显示实际路由**（provider/model，如「Codex-Relay (codex-relay / gpt-5.6-sol)」）+ keepalive 活性 + 后台任务实时输出环 + 一键打开子会话 | 自写原因：官方 UI 只显示任务描述看不出是哪个子代理、后台 job 输出环为空、活性无展示；本插件为只读可见性增强，不写任何数据 |
 
@@ -247,7 +247,7 @@ dsh plugin --profile web add D:\src\dsh\dsh-plugin-new-session
 | `dsh-config-pack` | 0.11.7 @ `6e4ac9d` | peer base/web-app = 0.2.1-rc.5 | web、plugintest、superagent、packed | 0.11.7 多 profile bundle 与恢复；0.11.6 adapter/公共通道分表；2026-11-10 provider 字面量与旧设备变量迁移；2026-11-13 刷新模型目录并修正元数据说明 |
 | `dsh-deepseek-keypool`（仓库 `dsh-provider-failover`） | 3.8.3 @ `29c7309`（最新 tag v3.6.0） | 运行时验证 | web、plugintest、superagent、packed | 3.8.3 裸 HTTP/2 stream 失败恢复；3.8.2 原始错误与定时重试状态；3.8.0 设置页列出全部 key |
 | `@jiangdaoli/dsh-archived-sessions` | 0.4.4 @ `fffe92f` | peer 精确 0.2.1-rc.5 | web、plugintest、superagent | 0.4.4 重写 lockfile 通过 frozen install；0.4.3 peer/dev 升级到 0.2.1-rc.5；0.4.1 适配 DSH 0.2 |
-| `@local/dsh-plugin-sidebar-visibility` | 0.0.7 @ `64eda5c` | 运行时验证 | web | v0.0.7 未读亮点；v0.0.4 非当前会话运行行模型色；v0.0.3 rc.2 目录树与运行中转圈 |
+| `@local/dsh-plugin-sidebar-visibility` | 0.0.9 @ `5834059` | 运行时验证 | web | v0.0.9 新建会话工作区选择器过滤；v0.0.8 superagent 任务隐藏（树/工作区）；v0.0.7 未读亮点；v0.0.4 非当前会话运行行模型色；v0.0.3 rc.2 目录树与运行中转圈 |
 | `dsh-plugin-provider-badge` | 0.4.0 @ `2a69c5f`（tag v0.3.1） | 运行时验证 | web | 0.4.0 当前工作区版本；v0.3.1 额度参数与徽标配置；v0.3.0 常用模型一键切换 |
 | `@local/dsh-subagent-acp-resilient` | 0.2.3（root 仓库跟踪） | peer 精确 0.2.1-rc.5 | web、plugintest、superagent、packed | 0.2.2 把上游 cause 明细透传；0.2.3 当前兼容版本 |
 | `dsh-plugin-subagent-monitor` | 0.1.0 @ tag `v0.1.0` | 运行时验证 | web | v0.1.0 子代理面板：实际路由徽标、keepalive、后台输出环、打开子会话 |
@@ -281,7 +281,7 @@ dsh plugin --profile web add D:\src\dsh\dsh-plugin-new-session
 | 5 | `dsh-codex-cred-sync` | 1.0.0 @ `8f4586e` | DSH 凭据引用与 pi agent auth 同步 | 运行时 |
 | 6 | `dsh-chat-import` | 0.25.2 | 外部聊天记录导入与反向导出 | 运行时 |
 | 7 | `dsh-mermaid-smooth` | 0.1.0 | Mermaid 渲染增强 | 运行时 |
-| 8 | `@local/dsh-plugin-sidebar-visibility` | 0.0.7 @ `64eda5c` | 侧栏隐藏/折叠/排序/收藏/运行状态 | 运行时 |
+| 8 | `@local/dsh-plugin-sidebar-visibility` | 0.0.9 @ `5834059` | 侧栏隐藏/折叠/排序/收藏/任务隐藏/选择器过滤/运行状态 | 运行时 |
 | 9 | `dsh-notify-bell` | 0.12.0 | 语义通知音 | 运行时 |
 | 10 | `@jiangdaoli/dsh-archived-sessions` | 0.4.4 @ `fffe92f` | 归档列表、查看器、删除 | peer 精确 |
 | 11 | `dsh-deepseek-keypool` | 3.8.3 @ `29c7309` | provider 分档故障转移与 key 轮换 | 运行时 |
