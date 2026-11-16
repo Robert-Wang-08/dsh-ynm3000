@@ -8,7 +8,7 @@ import time
 from contextlib import contextmanager
 from datetime import datetime, timedelta
 from pathlib import Path
-from common import CST, digest, load_config, atomic_text
+from common import CST, digest, instant, load_config, atomic_text
 from collect import collect
 from delivery import send, binding, binding_id, DeliveryError
 from render import report_text, render, chunks
@@ -51,6 +51,20 @@ def next_open(now,config):
     if target<=now:
         target+=timedelta(days=1)
     return target.timestamp()
+
+
+# A ticket must stay unchanged this long before its first human-attention notice, so a person who is
+# already answering in the source thread is not interrupted by a notification that repeats the question.
+ATTENTION_SETTLE_DEFAULT=900
+# An unbounded value would silently never notify; 0 keeps the old immediate behavior if a device asks for it.
+ATTENTION_SETTLE_MAX=3600
+
+def settle_seconds(config):
+    try:
+        value=float(config.get("attention_settle_seconds",ATTENTION_SETTLE_DEFAULT))
+    except (TypeError,ValueError):
+        value=ATTENTION_SETTLE_DEFAULT
+    return min(max(value,0.0),ATTENTION_SETTLE_MAX)
 
 
 def enqueue_report(store,config,snapshot,key,kind,urgent=False,issue=None):
@@ -115,16 +129,26 @@ def plan(store,config,snapshot,now):
             continue
         live={i["issueId"]:i for i in item["humanItems"]}
         known=store.get("issues:"+item["id"],{})
+        settle=settle_seconds(config)
         for ident,issue in live.items():
             state=known.get(ident,{"episode":0,"active":False,"revision":None,"sentKey":None,"reminders":0})
-            if not state["active"] or state["revision"]!=issue["revision"]:
+            if not state["active"]:
+                # A question that becomes pending again after not being pending is a new episode.
                 state["episode"]+=1
-                key=ident+":"+str(state["episode"])+":"+issue["revision"]
-                group=enqueue_report(store,config,snapshot,key,"待人工事项",issue={"id":ident,"revision":issue["revision"],"issueId":ident,"instanceId":item["id"],"ticketId":issue.get("ticketId"),"question":issue.get("question"),"reason":issue.get("reason"),"deadline":issue.get("deadline")})
-                state.update(active=True,revision=issue["revision"],sentKey=group+"-1",reminders=0,reminderDay=now.date().isoformat())
+                state.update(active=True,revision=issue["revision"],sentKey=None,reminders=0,reminderDay=now.date().isoformat())
+            else:
+                # The same question still waits; only its snapshot moved, so it keeps its notice and reminders.
+                state["revision"]=issue["revision"]
             if state.get("reminderDay")!=now.date().isoformat():
                 state.update(reminderDay=now.date().isoformat(),reminders=0)
-            accepted=store.accepted_at(state["sentKey"])
+            # The first notice waits for the ticket to stay unchanged: a person answering in the source
+            # thread bumps updatedAt and restarts this window, so the notice no longer interrupts a reply.
+            updated=instant(issue.get("updatedAt")) or now
+            if state.get("sentKey") is None and (now-min(updated,now)).total_seconds()>=settle:
+                key=ident+":"+str(state["episode"])+":"+issue["revision"]
+                group=enqueue_report(store,config,snapshot,key,"待人工事项",issue={"id":ident,"revision":issue["revision"],"issueId":ident,"instanceId":item["id"],"ticketId":issue.get("ticketId"),"question":issue.get("question"),"reason":issue.get("reason"),"deadline":issue.get("deadline")})
+                state["sentKey"]=group+"-1"
+            accepted=store.accepted_at(state["sentKey"]) if state.get("sentKey") else None
             delay=1800 if state["reminders"]==0 else 7200
             if accepted and not quiet(now,config) and state["reminders"]<3 and now.timestamp()-accepted>=delay:
                 ordinal=state["reminders"]+1

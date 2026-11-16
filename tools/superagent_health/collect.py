@@ -107,8 +107,11 @@ def instance(config, item, now, reader):
         if not end and row["stage"] == "person":
             attention = (detail or {}).get("attention") or {}
             human.append({"issueId": item["id"] + ":" + raw["id"] + ":" + str(attention.get("id") or row["action"] or "person"),
-                          "revision": digest([row["updatedAt"], recap.get("source"), attention.get("id")]),
-                          "ticketId": raw["id"], "reason": row["action"], "question": safe_text(attention.get("question") or row["title"]),
+                          # The revision names the pending question, not how recently the ticket changed:
+                          # an ordinary ticket update must not become a new alert for the same question.
+                          "revision": digest([attention.get("id") or row["action"] or "person"]),
+                          "ticketId": raw["id"], "reason": row["action"], "updatedAt": row["updatedAt"],
+                          "question": safe_text(attention.get("question") or row["title"]),
                           "recap": recap, "owner": "管理人", "deadline": None})
     errors = [k for k,v in health.items() if isinstance(v,dict) and v.get("state") == "error"]
     observed_sessions = list(sessions.values())
