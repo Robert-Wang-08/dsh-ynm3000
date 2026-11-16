@@ -7,6 +7,14 @@ param(
   [string]$Python = ''
 )
 $ErrorActionPreference = 'Stop'
+function New-HiddenAction([string]$Executable,[string]$Arguments,[string]$Launcher,[string]$WorkingDirectory){
+  $command='"'+$Executable+'" '+$Arguments
+  $body=@('Option Explicit','Dim sh, code','Set sh = CreateObject("WScript.Shell")',('sh.CurrentDirectory = "'+$WorkingDirectory.Replace('"','""')+'"'),('code = sh.Run("'+$command.Replace('"','""')+'", 0, True)'),'WScript.Quit code') -join [Environment]::NewLine
+  if(Test-Path -LiteralPath $Launcher){Copy-Item -LiteralPath $Launcher -Destination ($Launcher+'.bak-before-windowless') -Force}
+  [IO.File]::WriteAllText($Launcher,$body,[Text.UnicodeEncoding]::new($false,$true))
+  return New-ScheduledTaskAction -Execute (Join-Path $env:WINDIR 'System32/wscript.exe') -Argument ('//B //Nologo "'+$Launcher+'"') -WorkingDirectory $WorkingDirectory
+}
+
 if ($Action -eq 'init') {
   if (Test-Path -LiteralPath $Config) { throw 'Config already exists; refusing to overwrite.' }
   New-Item -ItemType Directory -Path (Split-Path -Parent $Config) -Force | Out-Null
@@ -23,9 +31,10 @@ if ($Action -eq 'install') {
   if (Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue) { throw 'Task exists; stop/uninstall explicitly before replacement.' }
   if (-not $Python) { $Python = (Get-Command python -ErrorAction Stop).Source }
   $runner = Join-Path $PSScriptRoot 'run.ps1'
-  $arguments = '-NoProfile -NonInteractive -ExecutionPolicy Bypass -File "' + $runner + '" -Config "' + $Config + '" -Python "' + $Python + '"'
+  $arguments = '-NoProfile -NonInteractive -WindowStyle Hidden -ExecutionPolicy Bypass -File "' + $runner + '" -Config "' + $Config + '" -Python "' + $Python + '"'
   if ($AllowSend) { $arguments += ' -AllowSend' }
-  $actionObject = New-ScheduledTaskAction -Execute (Get-Command pwsh -ErrorAction Stop).Source -Argument $arguments -WorkingDirectory $PSScriptRoot
+  $launcher = Join-Path (Split-Path -Parent $Config) 'superagent-health-task.vbs'
+  $actionObject = New-HiddenAction (Get-Command pwsh -ErrorAction Stop).Source $arguments $launcher $PSScriptRoot
   $trigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1) -RepetitionInterval (New-TimeSpan -Minutes 1)
   $options = New-ScheduledTaskSettingsSet -MultipleInstances IgnoreNew -StartWhenAvailable -ExecutionTimeLimit (New-TimeSpan -Minutes 5)
   Register-ScheduledTask -TaskName $TaskName -Action $actionObject -Trigger $trigger -Settings $options -Description 'DSH Superagent health sampler/reporter; local state and reliable outbox; no host profile changes.' | Out-Null

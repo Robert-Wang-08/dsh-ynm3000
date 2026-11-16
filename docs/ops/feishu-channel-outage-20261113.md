@@ -228,3 +228,7 @@ PY
 | 健康信号已存在但不告警 | `~/.dsh/state/superagent-health/latest.json` | `instances[0].components.reply.state=error` |
 | 同类故障历史 | `docs/ops/feishu-reply-2200-rootcause-20261112.md` | `sync_to_chat_info` + `--reply-in-thread` → `server_error 2200` |
 | 外部调度器可用 | `.ptc/logs/git-watchdog-20261113-190014/200013/210012/220013` | 20:00/21:00/22:00 每小时仍在跑（沙箱外） |
+
+## 10. 2026-11-16 监督实施增量
+
+M2及S1外置监督已落地：五分钟用户任务、身份核验、两次死亡确认、start互斥、首次/15分钟合并/恢复告警、独立CLI发送和持久重试。未实施上文所有S1–S6，也未停/重启现有服务。25项隔离测试与生产Monitor、计划执行通过；生产杀daemon自愈演练未做。安装、回滚与真实边界见[监督说明](feishu-supervisor-20261116.md)。

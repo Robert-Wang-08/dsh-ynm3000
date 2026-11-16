@@ -329,3 +329,7 @@ dsh --profile plugtest --host 127.0.0.1 --port 3081 --no-open   # 启动日志�
 ```
 
 登记内容必须与实际安装和最新 bundle 一致；宿主升级时整表复核并更新本节基线日期。
+
+## 飞书心跳监督（2026-11-16）
+
+新增独立脚本 `dsh-wechat-hitl/tools/register-feishu-supervisor.ps1`，注册每5分钟的 Monitor/Repair 用户任务，死亡确认才补起daemon，unknown只告警，不重启DSH。无需调整插件/bundle；安装、回滚、测试与限制见[监督运行说明](docs/ops/feishu-supervisor-20261116.md)。当前为本地源码交付，未发布。

@@ -66,7 +66,7 @@ pwsh tools/superagent_health/manage.ps1 start
 pwsh tools/superagent_health/manage.ps1 status
 ~~~
 
-安装后每分钟单次运行；任务计划的IgnoreNew和进程文件锁共同防止重叠。任务已存在时拒绝自动替换。查看heartbeat时间、最新报告和任务LastTaskResult；单机任务失败不能保证发出自身失联告警，需要异机watchdog才能检测整机离线。
+安装后每分钟单次运行；任务经`wscript.exe`启动隐藏窗口VBS运行（2026-11-16修复每次启动闪现pwsh控制台），保留子进程退出码供LastTaskResult。任务计划的IgnoreNew和进程文件锁共同防止重叠。任务已存在时拒绝自动替换。查看heartbeat时间、最新报告和任务LastTaskResult；单机任务失败不能保证发出自身失联告警，需要异机watchdog才能检测整机离线。
 
 已完成绑定及内容确认后，先执行一次真实投递验证，再启用发送任务：
 

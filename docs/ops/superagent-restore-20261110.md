@@ -1,6 +1,10 @@
 # superagent 备份恢复核实（2026-11-10）
 
-> 核实对象：DSH 工作区 `C:\Users\wang\src\dsh` 下的 `dsh-superagent`（profile `superagent`，面板 `127.0.0.1:3082`）。
+> **机器适用范围（2026-11-16 补注）**：本文记录的是 **x1t-wang 那台机器**（其工作目录在用户目录下的 `src\dsh`，bot `x1t-superagent` = `cli_aa79ee689678dd03`）。
+> 本机 aero17 的 bot 是 `aero17superagent-飞书bot` = `cli_aa67e4041a381c02`，**不要把本文的路径、bot 身份或「旧 bot 已弃用」结论照搬到 aero17**。
+> 本机 bot 的选择由 `dsh-superagent-lark-bot.ps1 -Action status` 决定（设备层固定文件 `~/.dsh/device/superagent-lark.json`）。
+
+> 核实对象：x1t-wang 机器上的 DSH 工作区（用户目录下 `src\dsh`）中的 `dsh-superagent`（profile `superagent`，面板 `127.0.0.1:3082`）。
 > 结论一句话：**插件本体与服务恢复了，superagent 自己的运行设置（GitHub 源、准入策略、执行目录）和飞书侧 CLI 根本没进过备份，所以看起来像"没恢复"。**
 
 ## 1. 判定依据
@@ -34,7 +38,7 @@ Invoke-WebRequest 'http://127.0.0.1:3082/orchestrator/api/state'    -Headers @{'
 Invoke-WebRequest 'http://127.0.0.1:3082/orchestrator/api/settings' -Headers @{'x-orchestrator-request'='1'} -UseBasicParsing
 
 # 补丁是否还在
-node docs\ops\dsh-superagent-patches\runner.mjs --pkg C:\Users\wang\src\dsh\dsh-superagent --mode verify
+node docs\ops\dsh-superagent-patches\runner.mjs --pkg <用户目录>\src\dsh\dsh-superagent --mode verify
 
 # 飞书侧是否有东西
 where.exe lark-cli
@@ -66,7 +70,7 @@ Test-Path "$env:USERPROFILE\.lark-cli-hitl-aa67e4041a381c02"
 | 1 | GitHub 源：`repository = Robert-Wang-08/dsh-ynm3000`、`cli = C:/Program Files/GitHub CLI/gh.exe` | `PUT /settings/source:github` → `{"saved":true,"revision":1,"restarting":true}`；复读 `GET settings` 一致；`GET state` → `setup.problem = null`，`accounts = {"repository":"Robert-Wang-08/dsh-ynm3000","agent":"Robert-Wang-08"}`，`health.github = ready` |
 | 2 | 准入名单：`policy.sources.github.allowed = [{"id":"Robert-Wang-08"}]` | `PUT /settings/policy` → `revision 1, policy_changed=true`；复读一致 |
 | 3 | 护眼底色插件 `dsh-plugin-eye-care-bg` 0.1.0（纯客户端 CSS，覆盖 `--dsw-alias-bg-base` 与 `html/body` 底色为 `#C7EDCC`） | 装进 `superagent` profile（bundle #22，`dsh-config-pack` 仍最后）；`--dump-config` exit 0 含 `eye-care-bg`；重启后启动日志无 `did not activate`；`/plugins` 响应内含 `dsh-plugin-eye-care-bg` 与 `C7EDCC` |
-| 4 | 飞书 CLI：`@larksuite/cli` 1.0.99 全局安装 | `lark-cli --version` → `1.0.99`；入口 `C:\Users\wang\AppData\Roaming\npm\lark-cli.cmd` |
+| 4 | 飞书 CLI：`@larksuite/cli` 1.0.99 全局安装 | `lark-cli --version` → `1.0.99`；入口 `<用户目录>\AppData\Roaming\npm\lark-cli.cmd` |
 
 两点实测提醒：
 
@@ -126,9 +130,9 @@ lark-cli auth status      # 看到 identities.bot.status = ready 即可
 
 下一步只剩：操作者 `lark-cli config init` 输入 app secret → 主控把 `cli` 填上、`POST /setup/check`、写 `policy.sources.feishu.allowed`。
 
-## 10. 换新 bot：`cli_aa79ee689678dd03`（2026-11-11 01:30）
+## 10. 换新 bot：`cli_aa79ee689678dd03`（2026-11-11 01:30，**x1t-wang 机器**）
 
-操作者新建了飞书应用 `cli_aa79ee689678dd03`（旧 `cli_aa67e4041a381c02` 弃用）。本机已做的接线：
+操作者在 **x1t-wang** 上新建飞书应用 `cli_aa79ee689678dd03`，并在**那台机器**上把 `cli_aa67e4041a381c02` 标为弃用（该结论只对 x1t 成立；aero17 上 aa67 仍是本机正确的 bot）。x1t 侧已做的接线：
 
 - 新建 bot 专用配置目录：`%USERPROFILE%\.lark-cli-superagent-aa79ee689678dd03`（当前为空，`config show` → `not_configured`）。
 - `dsh-superagent-service.ps1` 的配置目录优先级改为：新目录 → `~/.lark-cli-hitl-aa67e4041a381c02` → `~/.lark-cli-dsh-superagent`（仍可用 `-LarkDir` 覆盖）。3082 已按新目录重启，`setup.problem=null`、`github=ready`、`feishu=paused`。
@@ -149,7 +153,7 @@ C:/Users/wang/AppData/Roaming/npm/node_modules/@larksuite/cli/bin/lark-cli.exe
 2. **权限**至少 `im:message`（读单聊/群消息）与 `im:message:send_as_bot`（以机器人身份发消息），改完**发布版本**；
 3. 把机器人拉进要工作的群（或直接单聊它）。
 
-## 11. 飞书通道打通（2026-11-11 03:0x，`cli_aa79ee689678dd03`）
+## 11. 飞书通道打通（2026-11-11 03:0x，**x1t-wang 机器**，`cli_aa79ee689678dd03`）
 
 最终生效配置（全部经 `GET /settings` 读回）：
 

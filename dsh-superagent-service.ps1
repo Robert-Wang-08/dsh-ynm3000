@@ -1,3 +1,4 @@
+#Requires -Version 7.0
 <#
 .SYNOPSIS
 superagent 独立 DSH 服务的启停与状态（端口 3082，profile superagent）。
@@ -125,21 +126,33 @@ switch ($Action) {
     # 飞书/GitHub 的 setup 探测用 POSIX `env` 前缀；Windows 上由 Git for Windows 提供 env.exe，必须进 PATH。
     $gitEnv = 'C:\Program Files\Git\usr\bin'
     if (Test-Path $gitEnv) { $env:PATH = $gitEnv + ';' + $env:PATH }
-    # 飞书机器人的 lark-cli 专用配置目录（strict-mode bot），子进程继承。
-    # 2026-11-06：默认改用 superagent 专用 bot（cli_aa67e4041a381c02，「superagent-飞书bot」），
-    # 旧的 .lark-cli-dsh-superagent（cli_aa6697691db89c00）已被飞书 21001 数据安全策略拦，
-    # 只作兜底保留。可用 -LarkDir 覆盖。
-    $larkDir = $LarkDir
-    if (-not $larkDir) {
-      # 2026-11-10：新 bot cli_aa79ee689678dd03（旧 cli_aa67e4041a381c02 已弃用，保留兜底）。
-      $preferred = Join-Path $env:USERPROFILE '.lark-cli-superagent-aa79ee689678dd03'
-      $old = Join-Path $env:USERPROFILE '.lark-cli-hitl-aa67e4041a381c02'
-      $legacy = Join-Path $env:USERPROFILE '.lark-cli-dsh-superagent'
-      if (Test-Path $preferred) { $larkDir = $preferred } elseif (Test-Path $old) { $larkDir = $old } elseif (Test-Path $legacy) { $larkDir = $legacy }
+    # 飞书 bot 的 lark-cli 配置目录是「设备相关」，不在共享脚本里写死优先级（AGENTS.md §8）。
+    # 解析顺序：-LarkDir > 设备层 ~/.dsh/device/superagent-lark.json > 候选探测（含 appId 自检）。
+    # 换机时用 dsh-superagent-lark-bot.ps1 -Action pin -Dir <目录> 固定本机 bot；不改本文件。
+    # 注意：dot-source 会执行 helper 的 param() 绑定，把本脚本的 $Action/$Dir 覆写成默认值。
+    # 这里保存再恢复，避免以后在 start 分支之后新增逻辑时读到错误值。
+    $svcAction = $Action
+    . (Join-Path $PSScriptRoot 'dsh-superagent-lark-bot.ps1')
+    $Action = $svcAction
+    try {
+      $resolved = Resolve-DshLarkDir $LarkDir
+    } catch {
+      # 显式 -LarkDir 不可用：不因此让服务起不来，改为告警后回落设备层/探测。
+      Write-Host ('WARN 显式 -LarkDir 不可用：' + $_.Exception.Message + '；回落到设备层/探测')
+      $resolved = Resolve-DshLarkDir ''
+      $resolved.reason = ('显式 -LarkDir 被忽略；' + $resolved.reason)
     }
-    if ($larkDir -and (Test-Path $larkDir)) {
+    $larkDir = $resolved.chosen
+    if ($larkDir) {
       $env:LARKSUITE_CLI_CONFIG_DIR = $larkDir
-      Write-Host ('lark-cli config dir = ' + $larkDir)
+      Write-Host ('lark-cli config dir = ' + $larkDir + '  [appId=' + $resolved.appId + ' via ' + $resolved.source + ']')
+      if ($resolved.reason) { Write-Host ('  why: ' + $resolved.reason) }
+      foreach ($c in $resolved.candidates) {
+        if ($c.status -ne 'usable' -and $c.status -ne 'missing') { Write-Host ('  WARN 候选被跳过(' + $c.status + ')：' + $c.dir) }
+        if ($c.dir -eq $larkDir -and -not $c.verified -and $c.warn) { Write-Host ('  WARN 选中的目录未经 appId 自检：' + $c.warn) }
+      }
+    } else {
+      Write-Host ('WARN 没有可用的 lark-cli bot 配置目录：' + $resolved.reason)
     }
     $proc = Start-Process -FilePath $node -ArgumentList $bin,'--profile','superagent' -RedirectStandardOutput $outLog -RedirectStandardError $errLog -WindowStyle Hidden -PassThru
     $proc.Id | Set-Content $pidFile -Encoding utf8
