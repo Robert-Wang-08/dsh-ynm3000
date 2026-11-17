@@ -41,6 +41,8 @@ git clone --recurse-submodules https://github.com/Robert-Wang-08/dsh-ynm3000.git
 
 运行、绑定、验收与回滚见 [健康报告操作手册](docs/ops/superagent-health-report.md)；服务入口为 [service.py](tools/superagent_health/service.py)。dashboard用量保持可降级：认证和worker扫描覆盖未满足时不报告完整消耗金额。
 
+换另一台设备从零部署这套机制（依赖、设备配置、投递绑定、计划任务与验收清单）见 [跨设备部署说明](docs/ops/superagent-health-cross-device.md)。
+
 ## 新设备安装
 
 在 `dsh-config-pack` 里一条命令。有共享盘就读已经填好的答案；没有就用包内模板，或把说明交给 AI。然后装包、写路由、设置用户环境变量。密钥不进答案文件。
