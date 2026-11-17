@@ -89,6 +89,8 @@ skillhub-source: not-managed
      dsh plugin --profile <profile> add <仓库根>\dsh-plugin-ptc-switches
      dsh plugin --profile <profile> add <仓库根>\dsh-plugin-subagent-monitor
      dsh plugin --profile <profile> add <仓库根>\dsh-plugin-new-session
+     # 可选：会话头部「会话 ID」按钮（显示/复制 Session ID，并对齐 SuperAgent 工单）
+     dsh plugin --profile <profile> add <仓库根>\dsh-plugin-session-id
      ```
      逐个 add：参数顺序即 bundle 顺序，不要与 config-pack 混在同一次调用里。
       **目标机克隆路径与源设备不同时，优先用双向清单同步，不要手工猜路径**：源设备

@@ -1,0 +1,41 @@
+{
+  "name": "dsh-plugin-session-id",
+  "description": "DSH Web 增强插件：会话头部一键查看 / 复制当前 Session ID；执行器会话（worker-<ticketId>）同时给出 SuperAgent 工单 ID。只读会话标识，不读写会话内容。",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "cordis.patch.yml",
+    "README.md"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": []
+    }
+  },
+  "keywords": [
+    "dsh",
+    "deepseek-harness",
+    "dsh-plugin",
+    "session",
+    "session-id",
+    "superagent",
+    "web-ui"
+  ],
+  "scripts": {
+    "test": "node test/smoke-client.mjs"
+  },
+  "license": "MIT"
+}

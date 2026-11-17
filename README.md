@@ -30,6 +30,9 @@ git clone --recurse-submodules https://github.com/Robert-Wang-08/dsh-ynm3000.git
 
 - `dsh-plugin-new-session`
 - `dsh-plugin-ptc-switches`
+- `dsh-plugin-subagent-monitor`
+- `dsh-plugin-session-id`
+- `dsh-subagent-acp-resilient`
 - `dsh-plugin-sidebar-panel-area`
 - `dsh-plugin-superagent-appearance`
 - `dsh-plugin-eye-care-bg`
@@ -157,6 +160,7 @@ Windows 快捷入口：`launch-superagent.cmd` 默认委托现有服务脚本启
 | `dsh-plugin-sidebar-visibility` | 0.0.9 | Web 侧栏增强：工作区隐藏/折叠/拖拽排序、工作区行新建会话、会话重命名/分叉/归档、收藏+仅收藏筛选、superagent 任务隐藏（worker 会话 + work 工作区）、新建会话工作区选择器过滤、运行中转圈标识、插件列表↔原始列表热切换、Provider 挂起/恢复 | 状态持久化在 localStorage 单键，与官方侧栏同一惯例；官方无这些 API，天然做成本地视图 |
 | `dsh-plugin-provider-badge` | 0.4.0 | 模型选择器前的 provider 徽标（颜色 swatch 与文字分离，不依赖颜色辨识）。composer 实拍：![badge](https://raw.githubusercontent.com/Robert-Wang-08/dsh-plugin-provider-badge/master/docs/screenshots/badge-composer.png) | — |
 | `dsh-plugin-subagent-monitor` | 0.1.0 | 会话头部「子代理 N」面板：类型徽标**优先显示实际路由**（provider/model，如「Codex-Relay (codex-relay / gpt-5.6-sol)」）+ keepalive 活性 + 后台任务实时输出环 + 一键打开子会话 | 自写原因：官方 UI 只显示任务描述看不出是哪个子代理、后台 job 输出环为空、活性无展示；本插件为只读可见性增强，不写任何数据 |
+| `dsh-plugin-session-id` | 0.1.0 | 会话头部「会话 ID」按钮：弹层显示完整 Session ID 并可选中，一键复制；执行器会话（`worker-<ticketId>`）同时显示并复制 SuperAgent 工单 ID | 自写原因：会话头部只渲染标题、Web 端无 session 深链，GUI 里没有可靠又可见的办法复制会话 ID；本插件只读 `props.sessionId`，不改宿主、不读写会话内容 |
 
 子代理面板实拍（演示会话：1 个前台子代理 + 1 个后台 spawn 任务）：
 
@@ -165,13 +169,14 @@ Windows 快捷入口：`launch-superagent.cmd` 默认委托现有服务脚本启
 | `dsh-plugin-new-session` | 0.2.0 | 会话内一句话开**独立顶层会话**（等价 GUI「新建会话」，不是 subagent）：`new_session` 调 `sessionController.create/rename/prompt`，默认继承当前会话的**工作区**，可带标题与首条消息；配套项目级 skill `new-session` | 官方把该能力只留给 GUI 的 `session/create` RPC，agent 工具集里没有，自写补齐 |
 | `dsh-permission-compat` | 0.1.0 | **宿主补丁工具**：直接改写已装 dsh 模块（sandbox/pwsh/bash/fs）修宿主权限行为 | 不能作为 `dsh plugin` 依赖安装（带外 apply/verify/revert，带 .bak 备份），锁里标 `installable: false` |
 
-`dsh-plugin-new-session` 在新设备上登记一次，之后 `git pull` 即得后续更新
-（登记是 `link:` 依赖，指向本仓库目录，不复制代码）：
+`dsh-plugin-new-session` / `dsh-plugin-session-id` 在新设备上各登记一次，之后
+`git pull` 即得后续更新（登记是 `link:` 依赖，指向本仓库目录，不复制代码）：
 
 ```powershell
 git -C D:\src\dsh pull
 dsh plugin --profile web add D:\src\dsh\dsh-plugin-new-session
-# 重启 dsh web，并新开一个会话（工具表在会话启动时生成）
+dsh plugin --profile web add D:\src\dsh\dsh-plugin-session-id
+# 重启 dsh web，并新开一个会话（工具表在会话启动时生成；客户端按钮随页面加载生效）
 ```
 
 ### 上游 fork（本地改动领先上游）
@@ -263,6 +268,7 @@ dsh plugin --profile web add D:\src\dsh\dsh-plugin-new-session
 | `@local/dsh-subagent-acp-resilient` | 0.2.3（root 仓库跟踪） | peer 精确 0.2.1-rc.5 | web、plugintest、superagent、packed | 0.2.2 把上游 cause 明细透传；0.2.3 当前兼容版本 |
 | `dsh-plugin-subagent-monitor` | 0.1.0 @ tag `v0.1.0` | 运行时验证 | web | v0.1.0 子代理面板：实际路由徽标、keepalive、后台输出环、打开子会话 |
 | `dsh-plugin-subagent-director` | 0.6.0-beta.2 | 运行时验证 | web | 0.6 beta：按角色/调用参数选择 provider/model |
+| `dsh-plugin-session-id` | 0.1.0（root 仓库跟踪） | 运行时验证（无 peer/engines 声明） | 工作区登记；当前 profile 未启用 | 0.1.0 会话头部「会话 ID」按钮：显示/复制 Session ID；执行器会话解析并复制 SuperAgent 工单 ID |
 | `dsh-plugin-new-session` | 0.2.0（root 仓库跟踪） | 运行时验证 | web、plugtest、sa-local、superagent（`link:`） | 0.2.0 `new_session` 创建独立顶层会话 |
 | `dsh-plugin-ptc-switches` | 0.2.0（root 仓库跟踪） | 运行时验证 | web、plugtest、sa-local、superagent、web-restore（`link:`） | 0.2.0 PTC 模式热切换 UI |
 | `@local/dsh-ptc-multi-agent-mode` | bundle 0.3.0（公共源 v0.16.1） | 运行时验证；声明依赖仍写 0.2.0-rc.2 | web、packed | 可移植 PTC 多代理预设与 Codex/Kimi/Claude/OpenCode/Cursor 路由 |
