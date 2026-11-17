@@ -66,8 +66,53 @@ def tokens_text(tokens):
         parts.append("缓存写 "+compact(tokens.get("cacheWrite")))
     return "token "+" / ".join(parts)
 
+def deployment_tag(deployment):
+    """'branch@revision' for the report header; None when the guard did not run at all."""
+    if not isinstance(deployment, dict):
+        return None
+    if deployment.get("quality") != "observed":
+        return "运行代码未知"
+    return "运行代码 " + str(deployment.get("branch") or "?") + "@" + str(deployment.get("revision") or "?")
+
+def deployment_warning(deployment):
+    """The running checkout is not the main tip. None when it is, or when git could not tell."""
+    if not isinstance(deployment, dict) or deployment.get("quality") != "observed" or deployment.get("current") is True:
+        return None
+    branch=str(deployment.get("branch") or "?")
+    revision=str(deployment.get("revision") or "?")
+    main=str(deployment.get("mainRevision") or "?")
+    main_branch=str(deployment.get("mainBranch") or "main")
+    behind=int(deployment.get("behind") or 0)
+    ahead=int(deployment.get("ahead") or 0)
+    dirty=[str(path) for path in (deployment.get("dirty") or [])]
+    off_main=branch != main_branch or behind > 0 or ahead > 0 or revision != main
+    details=[]
+    if branch != main_branch:
+        details.append("处于 detached HEAD" if branch == "HEAD" else "在分支 " + branch + " 上")
+    if behind:
+        details.append("落后 main " + str(behind) + " 个提交")
+    if ahead:
+        details.append("领先 main " + str(ahead) + " 个提交")
+    if dirty:
+        names=[path.rsplit("/", 1)[-1] for path in dirty[:3]]
+        details.append(str(len(dirty)) + " 个健康工具文件未提交（" + "、".join(names) + "）")
+    if not details:
+        details.append("与 main 不一致")
+    if off_main:
+        return ("**部署警告**：运行代码 " + branch + "@" + revision + " 不是 main 顶端 " + main
+                + "（" + "、".join(details) + "）；合并到 main 的修复不会生效。在该仓库执行 "
+                "`git fetch origin` 后 `git merge --ff-only origin/main`，下一轮采集即生效。")
+    return ("**部署警告**：运行代码 " + branch + "@" + revision + " 有未提交改动：" + "、".join(details)
+            + "；定时任务执行的不是 main 上已提交的版本，请提交或还原这些文件。")
+
 def render(snapshot,kind="健康报告"):
-    lines=["# Superagent · " + kind, "", "统计截至 " + snapshot["windowEnd"] + "；状态采集于 " + snapshot["collectedAt"]]
+    tag=deployment_tag(snapshot.get("deployment"))
+    header=("统计截至 " + snapshot["windowEnd"] + "；状态采集于 " + snapshot["collectedAt"]
+            + ("；" + tag if tag else ""))
+    lines=["# Superagent · " + kind, "", header]
+    warning=deployment_warning(snapshot.get("deployment"))
+    if warning:
+        lines += ["", warning]
     for item in snapshot["instances"]:
         lines += ["", "## 【"+item["id"]+"】"+LABEL.get(item["health"],_label(item["health"]))]
         if item.get("collectionError"):
@@ -176,6 +221,9 @@ def render_health_notice(snapshot,kind,health):
     instance_id=(health or {}).get("instanceId")
     items=[i for i in snapshot["instances"] if i.get("id")==instance_id] or snapshot["instances"]
     lines=["# Superagent · " + kind, "", "状态采集于 "+snapshot["collectedAt"]]
+    warning=deployment_warning(snapshot.get("deployment"))
+    if warning:
+        lines += ["", warning]
     for item in items:
         lines += ["", "## 【"+item["id"]+"】"+LABEL.get(item.get("health"),_label(item.get("health")))]
         if kind=="异常健康报告":
