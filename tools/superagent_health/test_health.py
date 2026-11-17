@@ -107,7 +107,7 @@ class EvidenceTests(unittest.TestCase):
         self.assertIn("- 原因：answer",text)
         self.assertIn("完整待人工事项报告",text)
         self.assertIn("latest-attention.md",text)
-        self.assertIn("每两小时整点的「健康报告」",text)
+        self.assertIn("每 4 小时整点（09/13/17）",text)
         self.assertNotIn("## 今日用量",text)
         self.assertEqual(text,report_text(snap,"待人工事项",issue))
 
@@ -229,6 +229,25 @@ class ScheduleTests(unittest.TestCase):
                     store.put("closed:"+(NOW-timedelta(days=1)).date().isoformat(),{"already":True})
                     plan(store,{"instances":[{"id":"test"}]},snap,NOW+timedelta(seconds=1))
                 self.assertEqual(first,store.stats())
+            store.close()
+
+    def test_default_schedule_reports_every_four_hours(self):
+        # The device config may override schedule_hours; the shipped default must be 09/13/17.
+        with tempfile.TemporaryDirectory() as directory:
+            store=Store(directory)
+            store.put("last_plan_at",NOW.replace(hour=12,minute=0).isoformat())
+            store.put("closed:"+(NOW-timedelta(days=1)).date().isoformat(),{"already":True})
+            snap=sample()
+            def scheduled():
+                return sum(1 for row in store.db.execute("SELECT payload FROM outbox")
+                           if json.loads(row["payload"]).get("kind")=="定期健康报告")
+            with patch("service.binding",return_value=("oc_target","cli","configdir")):
+                plan(store,{"instances":[{"id":"test"}]},snap,NOW.replace(hour=13,minute=1))
+                self.assertEqual(scheduled(),1)
+                plan(store,{"instances":[{"id":"test"}]},snap,NOW.replace(hour=15,minute=1))
+                self.assertEqual(scheduled(),1)
+                plan(store,{"instances":[{"id":"test"}]},snap,NOW.replace(hour=17,minute=1))
+                self.assertEqual(scheduled(),2)
             store.close()
 
 class AttentionTimingTests(unittest.TestCase):

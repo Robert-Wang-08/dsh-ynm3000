@@ -14,7 +14,7 @@ EFFORT_INTRO="运行时长为建单到结束（含等待人工输入）；输入
 EFFORT_TOKEN_INTRO="token 为工单 worker 会话全时用量，不含主控/子代理/外部 ACP；无 usage 记未知，不填 0。"
 # One-line pointer back to the full report, so a focused attention notice is not a dead end.
 # The attention snapshot is the same full snapshot as the health report, kept under the attention title.
-REPORT_HINT="完整待人工事项报告：本机快照 `%USERPROFILE%\\.dsh\\state\\superagent-health\\latest-attention.md`；飞书全量报告见每两小时整点的「健康报告」（同内容）。"
+REPORT_HINT="完整待人工事项报告：本机快照 `%USERPROFILE%\\.dsh\\state\\superagent-health\\latest-attention.md`；飞书全量报告见每 4 小时整点（09/13/17）与 21:05 的「健康报告」（同内容）。"
 # What an operator does about a failed collection: the code alone does not say whether the host or the plugin is at fault.
 ERROR_HINT={"http_404":"该实例没有挂载 orchestrator 路由（插件未加载或正在重载），可用 /orchestrator/api/state 手工复核",
             "auth_401":"接口要求鉴权或令牌无效","auth_403":"接口拒绝该身份",
@@ -23,7 +23,7 @@ ERROR_HINT={"http_404":"该实例没有挂载 orchestrator 路由（插件未加
 HEALTH_CODE={"pollFailures":"轮询连续失败","setupPending":"等待部署检查","sourceOff":"按配置关闭",
              "feishuCliUnset":"飞书 bot CLI 未配置","feishuBotMissing":"等待飞书 bot"}
 # A focused incident message must not become a second full report: it only names the failure or the recovery.
-INCIDENT_BOUNDARY="本消息只报异常/恢复，不重复会话、工单与任务投入；完整报告见 09/11/13/15/17/19 整点的「健康报告」。"
+INCIDENT_BOUNDARY="本消息只报异常/恢复，不重复会话、工单与任务投入；完整报告见 09/13/17 整点及 21:05 的「健康报告」。"
 INCIDENT_HINT="本机完整快照 `%USERPROFILE%\\.dsh\\state\\superagent-health\\latest.md`。"
 
 def model_line(event):
