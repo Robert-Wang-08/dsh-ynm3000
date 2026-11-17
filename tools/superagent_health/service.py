@@ -126,7 +126,7 @@ def plan(store,config,snapshot,now):
         enqueue_report(store,config,snapshot,"startup:"+now.date().isoformat(),"启动健康报告")
         previous=now.isoformat()
     since=datetime.fromisoformat(previous)
-    slots=[now.replace(hour=h,minute=0,second=0,microsecond=0) for h in config.get("schedule_hours",[9,11,13,15,17,19])]
+    slots=[now.replace(hour=h,minute=0,second=0,microsecond=0) for h in config.get("schedule_hours",[9,13,17])]
     hour,minute=map(int,config.get("daily_time","21:05").split(":"))
     slots.append(now.replace(hour=hour,minute=minute,second=0,microsecond=0))
     due=[s for s in slots if since<s<=now]
