@@ -116,6 +116,10 @@ switch ($Action) {
     if (Test-Port) { Write-Host ('已在运行，端口 ' + $port + ' 已监听'); exit 0 }
     if ($RespectStop -and (Test-ManuallyStopped)) { Write-Host 'manually_stopped: true 按 -RespectStop 保持停止'; exit 1 }
     Prune-Logs
+    # DSH 只读启动瞬间的环境快照、不读 Windows 注册表；从旧终端/登录启动拉起的宿主会一直带着旧环境。
+    # 启动前把用户级环境变量补进当前进程（只补缺失、不覆盖、不输出值）；失败只告警，不阻断启动。
+    # 这是启动器侧的兜底，不改 DSH 本体；改动在下次 start/restart 生效。
+    & (Join-Path $PSScriptRoot 'dsh-user-env.ps1') -Quiet
     if (Test-Path $stateLock) { try { Remove-Item $stateLock -Recurse -Force -ErrorAction Stop; Write-Host 'CLEANED stale state lock: ' } catch { Write-Host ('WARN 无法清除 stale state lock（启动可能失败）: ' + $_.Exception.Message) } }
     $node = (Get-Command node).Source
     $bin = Join-Path (Split-Path $node) 'node_modules\@deepseek-ai\dsh\lib\bin.js'
