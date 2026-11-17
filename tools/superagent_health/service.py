@@ -59,6 +59,15 @@ ATTENTION_SETTLE_DEFAULT=900
 # An unbounded value would silently never notify; 0 keeps the old immediate behavior if a device asks for it.
 ATTENTION_SETTLE_MAX=3600
 
+# A degraded component is only an incident after the same error signature persists this many samples:
+# a source that flaps once (a poll retry, a plugin reload) must not page anyone.
+HEALTH_ALERT_CONFIRM=3
+# A recovery is announced after a sustained healthy run, not on the first green sample.
+HEALTH_RECOVERY_CONFIRM=3
+# One delivered incident is not repeated for the same instance inside this window, so a flapping
+# component cannot page once a minute. A new episode is still reported by the scheduled report.
+HEALTH_REALERT_COOLDOWN=900
+
 def settle_seconds(config):
     try:
         value=float(config.get("attention_settle_seconds",ATTENTION_SETTLE_DEFAULT))
@@ -67,12 +76,37 @@ def settle_seconds(config):
     return min(max(value,0.0),ATTENTION_SETTLE_MAX)
 
 
-def enqueue_report(store,config,snapshot,key,kind,urgent=False,issue=None):
+def alert_delivered(store,last):
+    """True when the last alert reached (or may have reached) the channel; a queued one was never seen."""
+    group=last.get("alertKey")
+    if not group:
+        # State written before alert keys existed cannot be checked; keep the old recovery behavior.
+        return bool(last.get("alerted"))
+    return store.state_of(group+"-1") in ("channel_accepted","unknown_delivery","sending")
+
+def alert_cooldown_ok(store,last,now):
+    """Cooldown starts at delivery when known, so a notice read this morning is not repeated at once."""
+    group=last.get("alertKey")
+    when=store.accepted_at(group+"-1") if group else None
+    if when is None:
+        when=last.get("alertedAt")
+    return when is None or now.timestamp()-float(when)>=HEALTH_REALERT_COOLDOWN
+
+def supersede_unseen_alert(store,last):
+    """Drop an alert queued for an older condition; its recovery message is unnecessary too."""
+    group=last.get("alertKey")
+    if group:
+        store.supersede_group(group)
+    last["alertKey"]=None
+    last["alertedAt"]=None
+
+
+def enqueue_report(store,config,snapshot,key,kind,urgent=False,issue=None,health=None):
     resolved=binding(config)
     fingerprint=binding_id(config,resolved)
     now=datetime.fromisoformat(snapshot["collectedAt"])
     group=digest([fingerprint,key,config["instances"]])
-    parts=chunks(report_text(snapshot,kind,issue))
+    parts=chunks(report_text(snapshot,kind,issue,health))
     available=now.timestamp() if urgent else max(next_open(now,config),snapshot.get("notBefore",0))
     entries=[]
     for index,text in enumerate(parts):
@@ -110,19 +144,61 @@ def plan(store,config,snapshot,now):
         store.put("closed:"+closing_day,{"group":group,"windowEnd":closed["windowEnd"]})
     for item in snapshot["instances"]:
         key="health:"+item["id"]
-        last=store.get(key,{"failure":0,"success":0,"episode":0,"alerted":False,"signature":None})
+        last=store.get(key,{})
+        for field in ("failure","success","episode"):
+            last.setdefault(field,0)
+        last.setdefault("alerted",False)
+        last.setdefault("signature",None)
         unavailable=item["health"]=="unknown"
+        component_bad=bool(item.get("errorComponents"))
         last["failure"]=last["failure"]+1 if unavailable else 0
-        last["success"]=0 if unavailable else last["success"]+1
+        # A degraded sample is not a healthy one: counting it would let the first green sample after
+        # a long component outage satisfy the whole recovery confirmation.
+        last["success"]=0 if unavailable or component_bad else last["success"]+1
         signature=digest([item.get("errorComponents",[]),item.get("collectionError")])
-        bad=bool(item.get("errorComponents")) or last["failure"]>=3
-        if bad and (not last["alerted"] or signature!=last["signature"]):
-            last["episode"]+=1
-            enqueue_report(store,config,snapshot,key+":"+str(last["episode"]),"异常健康报告",urgent=unavailable)
-            last["alerted"],last["signature"]=True,signature
-        elif not bad and last["alerted"] and last["success"]>=2:
-            enqueue_report(store,config,snapshot,key+":recover:"+str(last["episode"]),"恢复报告")
-            last["alerted"]=False
+        # Confirm a component error locally: the source already retries its own poll, and a single
+        # flapping sample must not turn one transient failure into an incident message.
+        if component_bad:
+            if last.get("pendingSignature")==signature:
+                last["pendingSamples"]=int(last.get("pendingSamples") or 0)+1
+            else:
+                last["pendingSignature"],last["pendingSamples"]=signature,1
+        else:
+            last["pendingSignature"],last["pendingSamples"]=None,0
+        # A collection outage keeps its source-level three-failure confirmation; a component error
+        # needs the local confirmation above.
+        confirmed=last["failure"]>=3 or (component_bad and last["pendingSamples"]>=HEALTH_ALERT_CONFIRM)
+        alerted=bool(last.get("alerted"))
+        if confirmed and (not alerted or signature!=last.get("signature")):
+            suppress=False
+            if alerted and not alert_delivered(store,last):
+                # The queued alert describes an older condition and nobody saw it; replace it.
+                supersede_unseen_alert(store,last)
+            elif not alert_cooldown_ok(store,last,now):
+                # The delivered alert already covers this episode; wait out the cooldown.
+                suppress=True
+            if not suppress:
+                last["episode"]+=1
+                group=enqueue_report(store,config,snapshot,key+":"+str(last["episode"]),"异常健康报告",
+                                     urgent=unavailable,health={"instanceId":item["id"]})
+                last.update(alerted=True,signature=signature,alertKey=group,alertedAt=now.timestamp(),
+                            alertComponents=list(item.get("errorComponents") or []),
+                            alertCollectionError=item.get("collectionError"))
+                # A recovery must be a fresh healthy run after this alert, not the pre-alert streak.
+                last["success"]=0
+        elif not unavailable and not component_bad:
+            if alerted and last["success"]>=HEALTH_RECOVERY_CONFIRM:
+                if alert_delivered(store,last):
+                    recover={"instanceId":item["id"],
+                             "previousComponents":list(last.get("alertComponents") or []),
+                             "previousCollectionError":last.get("alertCollectionError"),
+                             "alertedAt":datetime.fromtimestamp(float(last["alertedAt"]),CST).isoformat() if last.get("alertedAt") else None,
+                             "successSamples":last["success"]}
+                    enqueue_report(store,config,snapshot,key+":recover:"+str(last["episode"]),"恢复报告",health=recover)
+                else:
+                    # Nobody saw the alert, so there is nothing to recover from at 08:00 tomorrow.
+                    supersede_unseen_alert(store,last)
+                last["alerted"]=False
         store.put(key,last)
         # Only a successful complete ticket read may close a human issue.
         if item.get("quality")!="observed_nonatomic":

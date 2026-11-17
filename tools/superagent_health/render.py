@@ -19,6 +19,12 @@ REPORT_HINT="完整待人工事项报告：本机快照 `%USERPROFILE%\\.dsh\\st
 ERROR_HINT={"http_404":"该实例没有挂载 orchestrator 路由（插件未加载或正在重载），可用 /orchestrator/api/state 手工复核",
             "auth_401":"接口要求鉴权或令牌无效","auth_403":"接口拒绝该身份",
             "transport_or_schema":"连接失败或响应不是预期 JSON","response_budget":"响应超过读取上限"}
+# Source health codes, translated so an incident line names the failure instead of a bare identifier.
+HEALTH_CODE={"pollFailures":"轮询连续失败","setupPending":"等待部署检查","sourceOff":"按配置关闭",
+             "feishuCliUnset":"飞书 bot CLI 未配置","feishuBotMissing":"等待飞书 bot"}
+# A focused incident message must not become a second full report: it only names the failure or the recovery.
+INCIDENT_BOUNDARY="本消息只报异常/恢复，不重复会话、工单与任务投入；完整报告见 09/11/13/15/17/19 整点的「健康报告」。"
+INCIDENT_HINT="本机完整快照 `%USERPROFILE%\\.dsh\\state\\superagent-health\\latest.md`。"
 
 def model_line(event):
     response=event.get("lastResponse")
@@ -160,8 +166,54 @@ def render_attention(snapshot,kind,issue):
             lines += ["", "**注意**：本次状态采集异常，工单与人工待办数量可能不完整。"]
     return chr(10).join(lines)
 
-def report_text(snapshot,kind="健康报告",issue=None):
-    """Pick the focused notice renderer for human-attention messages."""
+def render_health_notice(snapshot,kind,health):
+    """One incident or recovery, without the full session, ticket and effort inventory.
+
+    `health` carries the incident instance and, for a recovery, the abnormal condition that
+    preceded it (components, collection error and alert time). The full report stays the job of
+    the scheduled slots; an alert must stay scannable when it arrives right next to one.
+    """
+    instance_id=(health or {}).get("instanceId")
+    items=[i for i in snapshot["instances"] if i.get("id")==instance_id] or snapshot["instances"]
+    lines=["# Superagent · " + kind, "", "状态采集于 "+snapshot["collectedAt"]]
+    for item in items:
+        lines += ["", "## 【"+item["id"]+"】"+LABEL.get(item.get("health"),_label(item.get("health")))]
+        if kind=="异常健康报告":
+            lines += ["", "**异常说明**"]
+            if item.get("collectionError"):
+                code=str(item["collectionError"])
+                lines.append("- 采集失败："+code+"（"+ERROR_HINT.get(code,"未分类")+"）；工单与人工待办数量未知。")
+            for name in item.get("errorComponents") or []:
+                entry=(item.get("components") or {}).get(name) or {}
+                code=entry.get("code")
+                line="- "+name+"："+HEALTH_CODE.get(code,str(code) if code else "状态 error")
+                if entry.get("at"):
+                    line+="（自 "+str(entry["at"])+" 起）"
+                lines.append(line)
+                if entry.get("detail"):
+                    lines.append("  - 最近错误："+safe_text(entry["detail"],160))
+            if not item.get("collectionError") and not item.get("errorComponents"):
+                lines.append("- 本次采集没有可复述的异常组件；请查看本地完整快照。")
+        else:
+            lines += ["", "**恢复时点**："+snapshot["collectedAt"]]
+            causes=[]
+            components=(health or {}).get("previousComponents") or []
+            if components:
+                causes.append("组件 "+"、".join(components)+" 已恢复 ready")
+            if (health or {}).get("previousCollectionError"):
+                causes.append("采集失败 "+str(health["previousCollectionError"])+" 已恢复")
+            if (health or {}).get("alertedAt"):
+                causes.append("异常自 "+str(health["alertedAt"])+" 起")
+            if (health or {}).get("successSamples") is not None:
+                causes.append("连续 "+str(health["successSamples"])+" 次采集成功")
+            lines += ["", "**原因说明**："+("；".join(causes) if causes else "采集恢复正常")+"。"]
+    lines += ["", "**边界**："+INCIDENT_BOUNDARY, "", INCIDENT_HINT]
+    return chr(10).join(lines)
+
+def report_text(snapshot,kind="健康报告",issue=None,health=None):
+    """Pick the focused notice renderer for human-attention and incident messages."""
+    if health is not None and kind in ("异常健康报告","恢复报告"):
+        return render_health_notice(snapshot,kind,health)
     if isinstance(issue,dict) and kind.startswith("待人工"):
         return render_attention(snapshot,kind,issue)
     return render(snapshot,kind)

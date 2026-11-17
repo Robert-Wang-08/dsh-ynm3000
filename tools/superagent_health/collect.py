@@ -188,7 +188,10 @@ def instance(config, item, now, reader):
     active_count = sum(s["events"].get("activeToday", False) for s in observed_sessions)
     missing = sum(s["events"].get("quality") != "observed" for s in observed_sessions)
     return {"id":item["id"], "health":"online_degraded" if errors else "reachable", "paused": state.get("paused"), "observedAt":now.isoformat(),
-            "components": {k:{"state":v.get("state"),"at":v.get("at"),"code":v.get("code")} for k,v in health.items() if isinstance(v,dict)},
+            "components": {k:{"state":v.get("state"),"at":v.get("at"),"code":v.get("code"),
+                              "detail":safe_text(v.get("detail"),160) if v.get("detail") else None,
+                              "values":v.get("values") if isinstance(v.get("values"),dict) else None}
+                           for k,v in health.items() if isinstance(v,dict)},
             "errorComponents":errors,"loopLiveness":"not_proven_by_http", "quality":quality, "paginationErrors":[e for e in (err_open,err_ended) if e],
             "openTickets": len(opened) if not err_open else None,"todayCompleted":today_completed if not err_ended else None,
             "activeManagedSessionsObserved":active_count,"sessionCoverage":"linked_master_and_ticket_workers_only; child/external sessions not proven",
