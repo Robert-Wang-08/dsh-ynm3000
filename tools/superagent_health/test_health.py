@@ -9,7 +9,7 @@ from pathlib import Path
 from unittest.mock import patch
 from common import CST, instant, safe_text, digest
 from events import fold_events
-from collect import instance, report_from_detail, tickets
+from collect import instance, report_from_detail, tickets, effort_from_detail
 from delivery import send, binding_id, DeliveryError
 from render import chunks, render, render_attention, report_text
 from store import Store
@@ -42,6 +42,17 @@ class EvidenceTests(unittest.TestCase):
         ev=event("assistant/message",NOW-timedelta(seconds=1),1,{"message":{"source":{"model":"m"}},"usage":{"outputTokens":4}})
         got=fold_events([ev,ev,event("assistant/message",NOW+timedelta(seconds=1),2,{"usage":{"outputTokens":100}})],"2026-11-12",NOW)
         self.assertEqual(got["tokens"]["output"],4)
+
+    def test_all_time_tokens_cover_previous_days_without_double_counting(self):
+        events=[event("assistant/message",NOW-timedelta(days=1),1,{"usage":{"inputTokens":10,"outputTokens":2}}),
+                event("assistant/message",NOW-timedelta(minutes=1),2,{"usage":{"inputTokens":3,"outputTokens":1,"cacheReadTokens":7}}),
+                event("assistant/message",NOW-timedelta(minutes=1),2,{"usage":{"inputTokens":3,"outputTokens":1,"cacheReadTokens":7}})]
+        got=fold_events(events,"2026-11-12",NOW)
+        self.assertEqual(got["tokens"]["input"],3)
+        self.assertEqual(got["tokensAll"]["input"],13)
+        self.assertEqual(got["tokensAll"]["output"],3)
+        self.assertEqual(got["tokensAll"]["cacheRead"],7)
+        self.assertEqual(got["usageResponsesAll"],2)
 
     def test_recap_has_report_provenance_and_staleness(self):
         detail={"assignments":[{"id":"attempt1","report":{"summary":"已完成接口验证","at":"2026-11-11T08:34:00Z","state":"ready"}}]}
@@ -310,6 +321,46 @@ class AttentionTimingTests(unittest.TestCase):
         self.plan_at(self.snapshot(NOW),NOW+timedelta(seconds=300))
         self.assertEqual(self.notices(),[])
 
+    def test_superseded_notice_is_rearmed_instead_of_staying_dead(self):
+        # A notice queued before the revision formula changed is superseded at dispatch; plan must re-arm it.
+        self.store.enqueue("legacy-notice",{"text":"x","kind":"待人工事项"},now=1)
+        with self.store.db:
+            self.store.db.execute("UPDATE outbox SET state='superseded' WHERE key='legacy-notice'")
+        self.store.put("issues:test",{"test:t1:attention-1":{"episode":1,"active":True,"revision":digest(["attention-1"]),"sentKey":"legacy-notice","reminders":0,"reminderDay":NOW.date().isoformat()}})
+        self.plan_at(self.snapshot(NOW),NOW+timedelta(seconds=200))
+        pending=self.store.db.execute("SELECT count(*) FROM outbox WHERE state='pending' AND payload LIKE '%待人工事项%'").fetchone()[0]
+        self.assertEqual(pending,1)
+        state=self.store.get("issues:test")["test:t1:attention-1"]
+        self.assertNotEqual(state["sentKey"],"legacy-notice")
+        self.assertEqual(state["episode"],2)
+
+    def test_upgrade_dispatch_supersedes_then_plan_rearms(self):
+        # End-to-end upgrade path: an in-flight notice written with the previous revision formula goes
+        # stale at dispatch (no send), and the next plan turns it into a fresh queued notice.
+        cfg={"instances":[{"id":"test"}]}
+        snap_old=self.snapshot(NOW)
+        snap_old["instances"][0]["humanItems"][0]["revision"]="legacy-revision"
+        with patch("service.binding",return_value=("oc_target","cli","configdir")), patch("service.send") as sender:
+            group=enqueue_report(self.store,cfg,snap_old,"test:t1:attention-1:1:legacy","待人工事项",
+                issue={"id":"test:t1:attention-1","revision":"legacy-revision","instanceId":"test"})
+            self.store.put("issues:test",{"test:t1:attention-1":{"episode":1,"active":True,"revision":"legacy-revision","sentKey":group+"-1","reminders":0,"reminderDay":NOW.date().isoformat()}})
+            dispatch(self.store,cfg,self.snapshot(NOW))
+            self.assertEqual(sender.call_count,0)
+            self.assertEqual(self.store.state_of(group+"-1"),"superseded")
+        self.plan_at(self.snapshot(NOW),NOW+timedelta(seconds=200))
+        pending=self.store.db.execute("SELECT count(*) FROM outbox WHERE state='pending' AND payload LIKE '%待人工事项%'").fetchone()[0]
+        self.assertEqual(pending,1)
+        state=self.store.get("issues:test")["test:t1:attention-1"]
+        self.assertNotEqual(state["sentKey"],group+"-1")
+        self.assertEqual(state["episode"],2)
+
+    def test_missing_updated_at_still_notifies(self):
+        # An unparseable updatedAt must fall back to the pre-settle behavior instead of waiting forever.
+        snap=self.snapshot(NOW)
+        del snap["instances"][0]["humanItems"][0]["updatedAt"]
+        self.plan_at(snap,NOW+timedelta(seconds=200))
+        self.assertEqual(len(self.notices()),1)
+
     def test_reminder_still_follows_an_accepted_notice(self):
         self.plan_at(self.snapshot(NOW),NOW+timedelta(seconds=200))
         row=self.store.db.execute("SELECT key FROM outbox WHERE state='pending'").fetchone()
@@ -339,6 +390,137 @@ class HumanItemIdentityTests(unittest.TestCase):
         self.assertEqual(before["revision"],after["revision"])
         self.assertEqual(before["updatedAt"],"2026-11-12T06:00:00Z")
         self.assertEqual(after["updatedAt"],"2026-11-12T06:03:00Z")
+
+
+class TaskEffortTests(unittest.TestCase):
+    """A finished task keeps its input rounds, handoffs and elapsed time for the effort ranking."""
+    class Reader:
+        def __init__(self, events=None): self.events=events or {}
+        def read(self,sid,day,now): return self.events
+
+    def collect(self, items, detail, now=NOW, events=None):
+        def fake_get(url,attempts=1):
+            if url.endswith("/state"): return {"health":{"api":{"state":"ok"}},"masterId":"master-1"},None
+            if "/tickets?state=open" in url: return {"items":[],"total":0,"next_offset":None},None
+            if "/tickets?state=ended" in url: return {"items":items,"total":len(items),"next_offset":None},None
+            if "/tickets/" in url:
+                ticket_id=url.rsplit("/",1)[-1]
+                return (detail(ticket_id) if callable(detail) else detail),None
+            return None,"http_404"
+        with patch("collect.get",side_effect=fake_get):
+            return instance({},{"id":"test","url":"http://127.0.0.1:3082"},now,self.Reader(events))
+
+    def items(self, ended_at="2026-11-12T06:00:00Z", created_at="2026-11-12T03:00:00Z"):
+        return [{"id":"t1","title":"任务一","stage":"ended","ended":{"at":ended_at,"outcome":"completed"},"createdAt":created_at,"sessionId":"worker-t1"}]
+
+    def detail(self, created_at="2026-11-12T03:00:00Z", ended_at="2026-11-12T06:00:00Z"):
+        return {"createdAt":created_at,"ended":{"at":ended_at},"assignments":[{"id":"a1","state":"ended"},{"id":"a2","state":"ended"}],
+                "decision":{"kind":"accept","triggerIds":["z"]},
+                "inputs":[{"kind":"trigger","triggerId":"x","human":True},{"kind":"resumed","triggerId":"x"},
+                          {"kind":"trigger","triggerId":"y","human":True},{"kind":"note","text":"补充"}]}
+
+    def test_finished_task_counts_distinct_inputs_handoffs_and_elapsed_time(self):
+        got=self.collect(self.items(),self.detail())
+        task=got["taskEffort"][0]
+        self.assertEqual(task["ticketId"],"t1")
+        self.assertEqual(task["outcome"],"completed")
+        # x, y follow-ups and z, the trigger that created the ticket; the resumed copy of x is not a new round.
+        self.assertEqual(task["inputRounds"],3)
+        self.assertEqual(task["handoffRounds"],2)
+        self.assertEqual(task["elapsedSeconds"],3*3600)
+        self.assertEqual(got["taskEffortTotal"],1)
+        self.assertEqual(got["taskEffortMissing"],0)
+
+    def test_finished_task_keeps_worker_session_token_usage(self):
+        usage={"tokensAll":{"input":1000,"output":200,"cacheRead":5000,"cacheWrite":0},"responsesWithoutUsageAll":0}
+        got=self.collect(self.items(),self.detail(),events=usage)
+        task=got["taskEffort"][0]
+        self.assertEqual(task["tokens"],{"input":1000,"output":200,"cacheRead":5000,"cacheWrite":0})
+        self.assertEqual(task["tokenQuality"],"complete")
+        self.assertEqual(got["taskTokenTotal"]["cacheRead"],5000)
+        self.assertEqual((got["taskTokenTasks"],got["taskTokenMissing"]),(1,0))
+
+    def test_missing_usage_stays_unknown_instead_of_zero(self):
+        got=self.collect(self.items(),self.detail())
+        task=got["taskEffort"][0]
+        self.assertIsNone(task["tokens"])
+        self.assertEqual(task["tokenQuality"],"unavailable")
+        self.assertIsNone(got["taskTokenTotal"])
+        snap=sample()
+        snap["instances"]=[got]
+        text=render(snap)
+        self.assertIn("token 未知",text)
+        self.assertNotIn("token 入 0",text)
+
+    def test_partial_usage_is_marked_on_the_task_line(self):
+        usage={"tokensAll":{"input":10,"output":2,"cacheRead":0,"cacheWrite":0},"responsesWithoutUsageAll":3}
+        got=self.collect(self.items(),self.detail(),events=usage)
+        self.assertEqual(got["taskEffort"][0]["tokenQuality"],"partial")
+        snap=sample()
+        snap["instances"]=[got]
+        self.assertIn("（部分响应无usage）",render(snap))
+
+    def test_effort_ranking_is_window_scoped(self):
+        # An older ticket still active today is listed as a ticket, but yesterday's task is not today's effort.
+        got=self.collect(self.items(ended_at="2026-11-11T06:00:00Z",created_at="2026-11-11T03:00:00Z"),
+                         self.detail(created_at="2026-11-11T03:00:00Z",ended_at="2026-11-11T06:00:00Z"),
+                         events={"activeToday":True,"quality":"observed"})
+        self.assertEqual(got["taskEffort"],[])
+        self.assertEqual(got["taskEffortMissing"],0)
+
+    def test_unreadable_detail_marks_effort_missing_instead_of_zero(self):
+        def fake_get(url,attempts=1):
+            if url.endswith("/state"): return {"health":{"api":{"state":"ok"}},"masterId":"master-1"},None
+            if "/tickets?state=open" in url: return {"items":[],"total":0,"next_offset":None},None
+            if "/tickets?state=ended" in url: return {"items":self.items(),"total":1,"next_offset":None},None
+            return None,"transport_or_schema"
+        with patch("collect.get",side_effect=fake_get):
+            got=instance({},{"id":"test","url":"http://127.0.0.1:3082"},NOW,self.Reader())
+        self.assertEqual(got["taskEffort"],[])
+        self.assertEqual(got["taskEffortMissing"],1)
+        snap=sample()
+        snap["instances"]=[got]
+        text=render(snap)
+        self.assertIn("任务投入",text)
+        self.assertIn("缺少可核验详情",text)
+        self.assertNotIn("输入 0 轮",text)
+
+    def test_creation_trigger_counts_as_the_first_round(self):
+        detail={"createdAt":"2026-11-12T03:00:00Z","assignments":[],"inputs":[],"decision":{"triggerIds":["z"]}}
+        got=effort_from_detail(detail,{"ended":{"at":"2026-11-12T06:00:00Z"}},NOW)
+        self.assertEqual(got["inputRounds"],1)
+
+    def test_impossible_time_range_is_not_reported_as_a_number(self):
+        detail={"createdAt":"2026-11-12T08:00:00Z","inputs":[],"assignments":[]}
+        self.assertEqual(effort_from_detail(detail,{"ended":{"at":"2026-11-12T06:00:00Z"}},NOW)["quality"],"unavailable")
+        detail={"createdAt":"2026-11-12T05:00:00Z","inputs":[],"assignments":[]}
+        self.assertEqual(effort_from_detail(detail,{"ended":{"at":"2026-11-12T07:00:00Z"}},NOW)["quality"],"unavailable")
+
+    def test_ranking_puts_the_longest_task_first(self):
+        items=[{"id":"t1","title":"长任务","stage":"ended","ended":{"at":"2026-11-12T06:00:00Z","outcome":"completed"},"createdAt":"2026-11-12T03:00:00Z"},
+               {"id":"t2","title":"短任务","stage":"ended","ended":{"at":"2026-11-12T05:00:00Z","outcome":"stopped"},"createdAt":"2026-11-12T04:00:00Z"}]
+        details={"t1":self.detail(), "t2":self.detail(created_at="2026-11-12T04:00:00Z",ended_at="2026-11-12T05:00:00Z")}
+        got=self.collect(items,lambda ticket_id:details[ticket_id])
+        self.assertEqual([task["ticketId"] for task in got["taskEffort"]],["t1","t2"])
+        self.assertEqual([task["elapsedSeconds"] for task in got["taskEffort"]],[3*3600,3600])
+
+    def test_render_orders_tasks_by_descending_duration(self):
+        snap=sample()
+        snap["instances"][0]["taskEffort"]=[
+            {"ticketId":"b"*32,"title":"长任务","outcome":"stopped","inputRounds":5,"handoffRounds":4,"elapsedSeconds":3660,
+             "tokens":{"input":2000,"output":100,"cacheRead":0,"cacheWrite":0},"tokenQuality":"complete"},
+            {"ticketId":"a"*32,"title":"短任务","outcome":"completed","inputRounds":1,"handoffRounds":1,"elapsedSeconds":90,
+             "tokens":{"input":500,"output":50,"cacheRead":0,"cacheWrite":0},"tokenQuality":"complete"}]
+        snap["instances"][0]["taskEffortTotal"]=2
+        snap["instances"][0]["taskTokenTotal"]={"input":2500,"output":150,"cacheRead":0,"cacheWrite":0}
+        snap["instances"][0]["taskTokenTasks"]=2
+        snap["instances"][0]["taskTokenMissing"]=0
+        text=render(snap)
+        self.assertIn("任务投入（本窗口结束，按运行时长排序）",text)
+        self.assertLess(text.index("长任务"),text.index("短任务"))
+        self.assertIn(" · 已停止 · 输入 5 轮 / 交手 4 次 · 运行 1h1m · token 入 2.0k / 出 100",text)
+        self.assertIn("运行 1m",text)
+        self.assertIn("本窗口结束任务合计 token 入 2.5k / 出 150（2 项有 usage）",text)
 
 
 class DispatchBoundaryTests(unittest.TestCase):

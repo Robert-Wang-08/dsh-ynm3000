@@ -8,6 +8,10 @@ formatting instead of one dense wall of text.
 from common import safe_text
 
 LABEL={"reachable":"接口可达","online_degraded":"在线但降级","unknown":"状态未知","working":"执行中","idle":"空闲未结束","person":"待人工","ended":"已结束"}
+# The authoritative end outcome, not a natural-language guess from the worker report.
+OUTCOME={"completed":"已完成","merged":"已完成","stopped":"已停止","dropped":"已结束未完成","closed":"已结束未完成"}
+EFFORT_INTRO="运行时长为建单到结束（含等待人工输入）；输入轮次为去重后的触发输入，交手为派给 worker 的次数。"
+EFFORT_TOKEN_INTRO="token 为工单 worker 会话全时用量，不含主控/子代理/外部 ACP；无 usage 记未知，不填 0。"
 # One-line pointer back to the full report, so a focused attention notice is not a dead end.
 # The attention snapshot is the same full snapshot as the health report, kept under the attention title.
 REPORT_HINT="完整待人工事项报告：本机快照 `%USERPROFILE%\\.dsh\\state\\superagent-health\\latest-attention.md`；飞书全量报告见每两小时整点的「健康报告」（同内容）。"
@@ -27,6 +31,34 @@ def _label(value):
 
 def _ticket_line(ticket):
     return "**" + ticket["id"][:8] + "** " + safe_text(ticket.get("title"),80) + " · " + LABEL.get(ticket.get("stage"),_label(ticket.get("stage")))
+
+def span(seconds):
+    """Short duration for a report line; hours omit a zero minute part."""
+    seconds=int(seconds or 0)
+    if seconds>=3600:
+        return str(seconds//3600)+"h"+str(seconds%3600//60)+"m"
+    if seconds>=60:
+        return str(seconds//60)+"m"
+    return str(seconds)+"s"
+
+def compact(value):
+    value=int(value or 0)
+    if value>=1000000:
+        return str(round(value/1000000,1))+"M"
+    if value>=1000:
+        return str(round(value/1000,1))+"k"
+    return str(value)
+
+def tokens_text(tokens):
+    """Input/output are the stable fields; cache is shown only when the source reported it."""
+    if not isinstance(tokens, dict):
+        return "token 未知"
+    parts=["入 "+compact(tokens.get("input")), "出 "+compact(tokens.get("output"))]
+    if tokens.get("cacheRead"):
+        parts.append("缓存读 "+compact(tokens.get("cacheRead")))
+    if tokens.get("cacheWrite"):
+        parts.append("缓存写 "+compact(tokens.get("cacheWrite")))
+    return "token "+" / ".join(parts)
 
 def render(snapshot,kind="健康报告"):
     lines=["# Superagent · " + kind, "", "统计截至 " + snapshot["windowEnd"] + "；状态采集于 " + snapshot["collectedAt"]]
@@ -64,6 +96,28 @@ def render(snapshot,kind="健康报告"):
                     lines.append("  - 摘要截至 "+recap["at"]+"；来源 "+recap["source"]+"（worker报告，未独立验收"+("；早于最新工单更新" if recap.get("mayBeStale") else "")+"）")
             if len(shown)>20:
                 lines.append("- 另有 "+str(len(shown)-20)+" 项，本地完整快照可查。")
+        effort=item.get("taskEffort") or []
+        missing=int(item.get("taskEffortMissing") or 0)
+        if effort:
+            lines += ["", "**任务投入（本窗口结束，按运行时长排序）**", EFFORT_INTRO, EFFORT_TOKEN_INTRO]
+            for index,task in enumerate(effort,1):
+                line=("- "+str(index)+". **"+str(task.get("ticketId") or "")[:8]+"** "+safe_text(task.get("title"),60)+" · "
+                      +OUTCOME.get(task.get("outcome"),"已结束")+" · 输入 "+str(task.get("inputRounds"))+" 轮 / 交手 "
+                      +str(task.get("handoffRounds"))+" 次 · 运行 "+span(task.get("elapsedSeconds"))+" · "+tokens_text(task.get("tokens")))
+                if task.get("tokenQuality")=="partial":
+                    line+="（部分响应无usage）"
+                lines.append(line)
+            total=item.get("taskTokenTotal")
+            if isinstance(total, dict):
+                lines.append("- 本窗口结束任务合计 "+tokens_text(total)+"（"+str(item.get("taskTokenTasks") or 0)+" 项有 usage"
+                             +("，"+str(item["taskTokenMissing"])+" 项未知" if item.get("taskTokenMissing") else "")+"）")
+            extra=int(item.get("taskEffortTotal") or len(effort))-len(effort)
+            if extra>0:
+                lines.append("- 另有 "+str(extra)+" 项已结束任务未列出（只列运行时长前 "+str(len(effort))+" 项）。")
+            if missing:
+                lines.append("- 另有 "+str(missing)+" 项已结束任务缺少可核验投入数据（详情读取失败或字段缺失），未计入排序。")
+        elif missing:
+            lines += ["", "**任务投入**：本窗口有 "+str(missing)+" 项结束任务，但缺少可核验详情，未给出统计。"]
         if item["humanItems"]:
             lines += ["", "**需要管理人**"]
             for issue in item["humanItems"]:

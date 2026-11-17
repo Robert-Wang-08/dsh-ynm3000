@@ -45,7 +45,8 @@ class EventReader:
             key = str(source) + ":" + day
             fingerprint = str(stat.st_mtime_ns) + ":" + str(stat.st_size)
             cached = self.cache.get(key)
-            if cached and cached.get("fingerprint") == fingerprint:
+            # A cache written before tokensAll existed has no all-time usage; recompute it once.
+            if cached and cached.get("fingerprint") == fingerprint and "tokensAll" in (cached.get("value") or {}):
                 return cached["value"]
             if stat.st_size > 64 * 1024 * 1024:
                 return {"quality": "log_size_budget"}
@@ -67,8 +68,12 @@ def fold_events(events, day, now):
     result = {"quality": "observed", "activeToday": False, "executionEvents": 0,
               "lastExecutionAt": None, "latestRequest": None, "lastResponse": None,
               "inFlight": None, "tokens": {"input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0},
-              "usageResponses": 0, "responsesWithoutUsage": 0, "childrenCoverage": "not_verified"}
-    request, pending, seen = {}, None, set()
+              "usageResponses": 0, "responsesWithoutUsage": 0,
+              # The whole session, so a finished ticket gets its lifetime usage and not only today's.
+              "tokensAll": {"input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0},
+              "usageResponsesAll": 0, "responsesWithoutUsageAll": 0,
+              "childrenCoverage": "not_verified"}
+    request, pending, seen, seen_all = {}, None, set(), set()
     for event in events:
         kind, data = event.get("type"), event.get("data") or {}
         when = instant(event.get("time"))
@@ -105,10 +110,23 @@ def fold_events(events, day, now):
                             result["tokens"][short] += value
                 else:
                     result["responsesWithoutUsage"] += 1
+            if source_id not in seen_all:
+                seen_all.add(source_id)
+                usage = data.get("usage")
+                if isinstance(usage, dict):
+                    result["usageResponsesAll"] += 1
+                    for short, long in (("input", "inputTokens"), ("output", "outputTokens"), ("cacheRead", "cacheReadTokens"), ("cacheWrite", "cacheWriteTokens")):
+                        value = usage.get(long)
+                        if isinstance(value, (int, float)) and not isinstance(value, bool) and value >= 0:
+                            result["tokensAll"][short] += value
+                else:
+                    result["responsesWithoutUsageAll"] += 1
         if kind in ("step/end", "turn/end"):
             pending = None
     # Persisted unmatched steps are only candidates: a crashed process can leave them open.
     result["inFlight"] = {**pending, "quality": "unmatched_persisted_step_not_live_proof"} if pending else None
     if result["usageResponses"] == 0:
         result["tokens"] = None
+    if result["usageResponsesAll"] == 0:
+        result["tokensAll"] = None
     return result
