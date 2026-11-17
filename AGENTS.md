@@ -20,6 +20,7 @@
 | `dsh-plugin-provider-badge` | UI 插件 | `link:` 已登记 |
 | `dsh-plugin-ptc-switches` | UI 插件 | `link:` 已登记 |
 | `dsh-plugin-subagent-monitor` | 监控插件 | `link:` 已登记 |
+| `dsh-plugin-session-id` | 会话头部「会话 ID」按钮 UI 插件 | **未在 web profile 依赖中——按需 `dsh plugin add`，见 README** |
 | `dsh-subagent-acp-resilient` | 子代理插件 | `link:` 已登记 |
 | `dsh-plugin-new-session` | 会话内创建独立顶层会话的工具插件（配套 skill `new-session`） | `link:` 已登记 |
 | `dsh-permission-compat` | 插件 | **未在 web profile 依赖中——改动前先核查是否需要登记/清理** |
