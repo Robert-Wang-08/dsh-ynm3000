@@ -30,3 +30,7 @@
 	path = dsh-superagent
 	url = https://github.com/Robert-Wang-08/dsh-superagent-prototype.git
 	branch = main
+[submodule "dsh-superagent-patch"]
+	path = dsh-superagent-patch
+	url = https://github.com/Robert-Wang-08/dsh-superagent-patch.git
+	branch = main
