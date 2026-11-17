@@ -5,7 +5,7 @@ Markdown. The delivery transport converts Markdown into a Feishu rich-text post
 (`tag: md`), so headings, bullet lists and blank lines reach the reader as real
 formatting instead of one dense wall of text.
 """
-from common import safe_text
+from common import CST, instant, safe_text
 
 LABEL={"reachable":"接口可达","online_degraded":"在线但降级","unknown":"状态未知","working":"执行中","idle":"空闲未结束","person":"待人工","ended":"已结束"}
 # The authoritative end outcome, not a natural-language guess from the worker report.
@@ -46,6 +46,61 @@ def span(seconds):
     if seconds>=60:
         return str(seconds//60)+"m"
     return str(seconds)+"s"
+
+def _ticket_pr(ticket):
+    """The pull request bound to the ticket, which a review decision is about."""
+    pr=(ticket or {}).get("pr")
+    return str(pr) if isinstance(pr,(int,str)) and str(pr).isdigit() else None
+
+def _decision(issue, ticket):
+    """The pending question and the action it needs, in the reader's terms rather than the stage code."""
+    reason=str(issue.get("reason") or "")
+    raw=str(issue.get("question") or "").strip()
+    question=safe_text(raw,240) if raw else ""
+    title=safe_text((ticket or {}).get("title"),80) if (ticket or {}).get("title") else ""
+    pr=_ticket_pr(ticket)
+    if reason=="review":
+        decision="是否验收这单的交付"+(("（PR #"+pr+"）") if pr else "")
+        action=("复核 PR #"+pr+"：要交付就在 GitHub 合并；要改就在原工单回复修改意见。"
+                if pr else "复核 worker 交出的成果，并在原工单回复你的结论（通过，或还要改什么）。")
+    elif reason=="answer":
+        decision=question or "worker 在工单上提出了问题，等你回答"
+        action="在提出问题的对话（原工单线程）回复答案；你的回复会作为新输入交给 worker。"
+    elif reason=="delivery":
+        decision="你的回复还没有送达 worker"
+        action="投递会自动重试；长时间未恢复时在面板对该工单点「重试」。"
+    elif reason=="blocked":
+        decision=question if question and question!=title else "worker 报告阻塞，等你决定是否继续"
+        action="在原工单回复你的决定；你的消息会解除阻塞并唤醒 worker。"
+    elif reason=="failed":
+        decision=question if question and question!=title else "worker 报告失败，等你决定是否重试"
+        action="在原工单回复你的决定（重试或调整范围），也可以在面板点「重试」。"
+    else:
+        decision=question or "工单在等人处理"
+        action="在原工单回复你的决定。"
+    return decision, action
+
+def _wait_line(issue, ticket, snapshot):
+    """How long the ticket has waited without changing; a missing or future time is left out."""
+    changed=instant((ticket or {}).get("updatedAt") or issue.get("updatedAt"))
+    now=instant(snapshot.get("windowEnd")) or instant(snapshot.get("collectedAt"))
+    if not changed or not now:
+        return None
+    seconds=(now-changed).total_seconds()
+    if seconds<0:
+        return None
+    return "工单自 "+changed.astimezone(CST).strftime("%m-%d %H:%M")+" 起未再更新（已等待 "+span(seconds)+"）"
+
+def _progress_line(ticket):
+    """The worker's own last words, so a review or blocker decision has something to judge."""
+    recap=(ticket or {}).get("recap") or {}
+    text=str(recap.get("text") or "").strip()
+    if not text or recap.get("quality")=="unavailable":
+        return None
+    line="最后进展（worker 报告）："+safe_text(text,180)
+    if recap.get("mayBeStale"):
+        line+="（早于工单最新更新）"
+    return line
 
 def compact(value):
     value=int(value or 0)
@@ -171,9 +226,18 @@ def render(snapshot,kind="健康报告"):
             lines += ["", "**任务投入**：本窗口有 "+str(missing)+" 项结束任务，但缺少可核验详情，未给出统计。"]
         if item["humanItems"]:
             lines += ["", "**需要管理人**"]
+            tickets={ticket["id"]:ticket for ticket in item["tickets"]}
             for issue in item["humanItems"]:
-                lines.append("- **"+str(issue.get("ticketId") or "")[:8]+"** "+safe_text(issue.get("question")))
-                lines.append("  - 原因："+str(issue.get("reason"))+"；事项："+str(issue.get("issueId"))+"；期限未设置。请回原工单处理，通知不等于授权。")
+                ticket=tickets.get(issue.get("ticketId"))
+                lines.append("- "+(_ticket_line(ticket) if ticket is not None else "**"+str(issue.get("ticketId") or "")[:8]+"**"))
+                decision,action=_decision(issue,ticket)
+                lines.append("  - 待决问题："+decision)
+                lines.append("  - 需要你做："+action)
+                wait=_wait_line(issue,ticket,snapshot)
+                if wait:
+                    lines.append("  - "+wait)
+                lines.append("  - 事项："+str(issue.get("issueId") or issue.get("id") or "")+"；期限："+str(issue.get("deadline") or "未设置"))
+            lines.append("- 以上事项请回对应工单处理；通知不等于授权。")
     lines += ["", "## 今日用量"]
     for item in snapshot["dashboard"]:
         lines.append("- dashboard："+item["quality"]+" / "+str(item.get("error") or "仅状态已读")+"。未取得可核验完整金额，不填零；worker目录覆盖待修复。")
@@ -190,23 +254,31 @@ def render_attention(snapshot,kind,issue):
     lines=["# Superagent · " + kind, "", "统计截至 " + snapshot["windowEnd"]]
     if instance is not None:
         lines += ["", "## 【"+instance["id"]+"】"+LABEL.get(instance.get("health"),_label(instance.get("health")))]
-    lines += ["", "**需要你决定**", ""]
+    lines += ["", "**需要你处理**", ""]
     ticket_id=str(issue.get("ticketId") or (ticket or {}).get("id") or "")
     if ticket is not None:
         lines.append("- 工单："+_ticket_line(ticket))
     elif ticket_id:
         lines.append("- 工单："+"**"+ticket_id[:8]+"**")
-    lines.append("- 问题："+safe_text(issue.get("question"),400))
-    lines.append("- 原因："+str(issue.get("reason") or "未标注"))
-    lines.append("- 事项："+str(issue.get("id") or issue.get("issueId") or ""))
-    lines.append("- 期限："+str(issue.get("deadline") or "未设置"))
+    decision,action=_decision(issue,ticket)
+    lines.append("- 待决问题："+decision)
+    lines.append("- 需要你做："+action)
+    progress=_progress_line(ticket)
+    if progress:
+        lines.append("- "+progress)
+    wait=_wait_line(issue,ticket,snapshot)
+    if wait:
+        lines.append("- "+wait)
+    lines.append("- 事项："+str(issue.get("id") or issue.get("issueId") or "")+"；期限："+str(issue.get("deadline") or "未设置"))
     lines += ["", "请回原工单处理；通知不等于授权。", "", REPORT_HINT]
     if instance is not None:
         others=[i for i in instance.get("humanItems",[]) if i.get("issueId")!=issue.get("id")]
         if others:
             lines += ["", "**其他待人工（"+str(len(others))+"）**"]
+            tickets={item["id"]:item for item in instance.get("tickets",[])}
             for other in others:
-                lines.append("- **"+str(other.get("ticketId") or "")[:8]+"** "+safe_text(other.get("question"),80))
+                other_decision,_=_decision(other,tickets.get(other.get("ticketId")))
+                lines.append("- **"+str(other.get("ticketId") or "")[:8]+"** "+safe_text(other_decision,80))
         if instance.get("health") in ("unknown",):
             lines += ["", "**注意**：本次状态采集异常，工单与人工待办数量可能不完整。"]
     return chr(10).join(lines)
