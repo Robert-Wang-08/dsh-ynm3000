@@ -22,6 +22,7 @@ git clone --recurse-submodules https://github.com/Robert-Wang-08/dsh-ynm3000.git
 - `dsh-plugin-sidebar-visibility`
 - `dsh-provider-failover`
 - `dsh-superagent`（维护 fork `Robert-Wang-08/dsh-superagent-prototype`，原上游 `deepseek-ai/dsh-superagent-prototype` 保留为 `upstream`；独立服务，不是插件：以 `link:` 装进**独立 profile `superagent`**，端口 3082；装机、补丁与验收见 [docs/ops/superagent-profile.md](docs/ops/superagent-profile.md)）
+- `dsh-superagent-patch`（`dsh-superagent` 的适配补丁与上游同步脚本辅助仓，**非运行时依赖**：`patches/` 存档 5 个 format-patch、`scripts/upgrade.ps1` 做候选分支 + clean-build + 测试闸门的可选上游同步；见 [dsh-superagent-patch/README.md](dsh-superagent-patch/README.md)）
 - `dsh-wechat-hitl`
 
 `dsh-wechat-hitl` 不走 `link:`：它以**目录副本**装进 `profiles/{web,headless}/node_modules/dsh-wechat-hitl`，再由该 profile 的 `cordis.patch.yml` 里 `- insert: wechat-hitl` 挂载（片段由 `dsh-wechat-hitl/tools/switch-hitl.mjs` 管理，路径跟随 `DSH_HOME`）。因此改代码后要**重新拷一次**到 profile，不像 `link:` 插件那样 `git pull` 即生效。装机与验收步骤见 [docs/bootstrap/PROMPT-新设备装机-引导.md](docs/bootstrap/PROMPT-新设备装机-引导.md) 第 5 步。
@@ -114,7 +115,7 @@ A/B 使用不同克隆目录时，用可移植清单交换包名、版本与 bun
 
 ## DSH 收口备份与一键恢复
 
-「收口备份」= 把工作区（根仓库 + 全部子仓库）未提交的改动按显式路径提交，同时把**全部 profile** 打成一份可跨机恢复的 bundle；换机时用 `dsh-restore.ps1` 一键恢复。备份与恢复入口都在仓库根目录。脚本动态发现根目录下带 `.git` 的仓库（当前根 + 7 个子模块），工作区之外的兄弟检出（`D:\src\dsh-superagent`）用 `-IncludeSiblingRepos` 纳入、`focus-hub` 用 `-IncludeFocusHub` 纳入：
+「收口备份」= 把工作区（根仓库 + 全部子仓库）未提交的改动按显式路径提交，同时把**全部 profile** 打成一份可跨机恢复的 bundle；换机时用 `dsh-restore.ps1` 一键恢复。备份与恢复入口都在仓库根目录。脚本动态发现根目录下带 `.git` 的仓库（当前根 + 8 个子模块），工作区之外的兄弟检出（`D:\src\dsh-superagent`）用 `-IncludeSiblingRepos` 纳入、`focus-hub` 用 `-IncludeFocusHub` 纳入：
 
 ```powershell
 # 只盘点（不备份、不提交）
