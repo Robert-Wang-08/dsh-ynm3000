@@ -1,7 +1,8 @@
 # superagent 独立服务（profile `superagent`，端口 3082）
 
-> 状态（2026-11-05）：已完成 web profile 插件与配置集成，服务已在 `127.0.0.1:3082` 独立运行。
+> 状态（2026-11-17 复核）：已完成 web profile 插件与配置集成，服务在 `127.0.0.1:3082` 独立运行；已补 `DSH-Superagent-SelfHeal` 计划任务自愈（见 §3.1）。
 > 管理入口：根目录 `dsh-superagent-service.ps1`（启停/状态）；同步入口：`dsh-superagent-profile-sync.ps1`。
+> 2026-11-14 08:57 机器停机后服务静默停摆、无人发现（陈旧 pid + 残留 state lock），2026-11-17 由 `start` 清理锁后拉起：pid 30008、`setup ok`、`health` 无 error。
 
 ## 1. 这个服务是什么
 
@@ -26,7 +27,7 @@ superagent 官方要求它是 Web profile 的副本。本机在此之上让它**
 | 条目 | 覆盖 | 原因 |
 | --- | --- | --- |
 | `webserver` | `host 127.0.0.1` / `port 3082` | 与 3080 的 web 实例分开 |
-| `dsh-superagent` | `stateDir: C:/Users/wwm_1/.dsh/state/superagent` | 插件强制要求绝对路径；数据库/锁/worker-bin 都在这里 |
+| `dsh-superagent` | `stateDir: C:\Users\wang\.dsh\state\superagent` | 插件强制要求绝对路径；数据库/锁/worker-bin 都在这里 |
 | `embedded-browser` | `profileDir: .../embedded-browser/profile-superagent` | 两个实例不共用 Chrome user-data-dir，避免争用 |
 | `wechat-hitl` | `disabled: true` | 两个实例同用一份微信网关队列，避免重复应答；要启用就改这一行 |
 
@@ -52,6 +53,32 @@ pwsh -File dsh-superagent-service.ps1 logs
 面板 URL 形如 `http://127.0.0.1:3082/?token=<一次性 token>`：服务启动时打印在 `.artifacts/service-*.out.log` 的 `dsh web:` 行。裸 `GET /` 返回 401 属正常——必须先带 token 建立 cookie，之后同浏览器即可直达。
 
 **状态锁**：dsh-superagent 用 `proper-lockfile` 同步锁住 stateDir（`~/.dsh/state/superagent.lock`），且没有重试。硬停会留下这个锁目录，导致下次启动报 `dsh-superagent: Error: Lock file is already being held`、`orchestrator` 不激活、API 404。`dsh-superagent-service.ps1` 的 `stop` 与 `start` 都会在确认无监听后清理该锁；手工重启失败时先删掉 `superagent.lock` 再启动。
+
+注意：`start` 清锁需要写 `~/.dsh`，在 DSH `workspace-write` 沙箱里会报 `Access to the path ... superagent.lock is denied`、随后 `Start-Process` 写日志也被拒——必须在 `danger-full-access`（或沙箱外终端）里执行。
+
+### 3.1 自愈（计划任务 `DSH-Superagent-SelfHeal`）
+
+服务不会随 DSH 3080 实例重启而自动回来，2026-11-17 前就因机器停机静默停了 3 天。因此注册了用户级计划任务：登录时触发 + 每小时重复，动作等价于
+
+```powershell
+pwsh -NoProfile -NonInteractive -File "C:\Users\wang\src\dsh\dsh-superagent-service.ps1" start -RespectStop
+```
+
+- `-RespectStop` 保证人工 `stop` 后不会被自愈偷偷拉起（看 `manual-stop` 标记）；要恢复自愈就先 `start`，或删掉 `control\profiles\superagent\manual-stop`。
+- 注册（换设备按此重建，用户级、不需要管理员）：
+
+```powershell
+$act  = New-ScheduledTaskAction -Execute (Get-Command pwsh).Source -WorkingDirectory 'C:\Users\wang\src\dsh' `
+  -Argument '-NoProfile -NonInteractive -File "C:\Users\wang\src\dsh\dsh-superagent-service.ps1" start -RespectStop'
+$trg  = @(New-ScheduledTaskTrigger -AtLogOn -User $env:USERNAME,
+          New-ScheduledTaskTrigger -Once -At ((Get-Date).AddMinutes(5)) -RepetitionInterval (New-TimeSpan -Hours 1))
+$set  = New-ScheduledTaskSettingsSet -StartWhenAvailable -MultipleInstances IgnoreNew -ExecutionTimeLimit (New-TimeSpan -Minutes 15) -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
+$pr   = New-ScheduledTaskPrincipal -UserId $env:USERNAME -LogonType Interactive -RunLevel Limited
+Register-ScheduledTask -TaskName 'DSH-Superagent-SelfHeal' -Action $act -Trigger $trg -Settings $set -Principal $pr -Force
+```
+
+- 验收（2026-11-17 实测）：`stop` 服务后清掉 `manual-stop` 再 `Start-ScheduledTask`，**6s** 内 3082 恢复监听，`LastTaskResult=0`，`status` exit 0 / `setup ok` / 无 health error。
+- 排查：任务动作输出不落盘，跑失败时先看 `~/.dsh/profiles/superagent/.artifacts/service-*.log` 是否新增；若 `LastTaskResult=1` 且无新日志，多半是 `-RespectStop` 命中 `manual-stop` 标记。
 
 ## 4. 验收（改完/重启后按顺序跑）
 
@@ -83,7 +110,7 @@ pwsh -File dsh-superagent-service.ps1 start
 注意：
 
 - 覆盖段落由脚本整段重写，不要在 `cordis.patch.yml` 里手工加东西（会被覆盖）；要长期追加请改脚本里的 `$own`。
-- `dsh-superagent` 用 `link:` 指向 `D:/src/dsh-superagent`，改源码后需要在该仓库 `pnpm build`（bundle 读 `lib/`）。
+- `dsh-superagent` 用 `link:` 指向 `C:/Users/wang/src/dsh/dsh-superagent`（以 profile `package.json` 落盘值为准），改源码后需要在该仓库 `pnpm build`（bundle 读 `lib/`）。
 - 每次同步都留一份 `%USERPROFILE%\.dsh\backups\superagent-pre-web-integration-<UTC>\`（含 `MANIFEST.json` 与 web 侧文件哈希）。
 
 ## 6. 与 3080 web 实例的差异
