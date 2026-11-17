@@ -30,6 +30,8 @@ pwsh tools/superagent_health/manage.ps1 init
 
 这一步只建新设备配置；已存在则拒绝覆盖。配置路径默认是用户目录下.dsh/device/superagent-health/config.json；操作系统路径、实例端口、收件人等只放设备层，不进Git。Python/CLI/技能未找到时，先装齐这些依赖再验证。现有样例中的3082/3083是可改的参考实例，不代表其他机器的真实部署。
 
+另一台设备从零部署的完整步骤、验收清单和回滚见 [跨设备部署说明](superagent-health-cross-device.md)。
+
 ## Dry-run 与检查
 
 
