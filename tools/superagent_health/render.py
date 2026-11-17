@@ -61,7 +61,7 @@ def _decision(issue, ticket):
     pr=_ticket_pr(ticket)
     if reason=="review":
         decision="是否验收这单的交付"+(("（PR #"+pr+"）") if pr else "")
-        action=("复核 PR #"+pr+"：要交付就在 GitHub 合并（合并后这单结束）；要改就在原工单回复修改意见。"
+        action=("复核 PR #"+pr+"：要交付就在 GitHub 合并；要改就在原工单回复修改意见。"
                 if pr else "复核 worker 交出的成果，并在原工单回复你的结论（通过，或还要改什么）。")
     elif reason=="answer":
         decision=question or "worker 在工单上提出了问题，等你回答"
