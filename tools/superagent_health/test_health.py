@@ -369,6 +369,165 @@ class AttentionTimingTests(unittest.TestCase):
         self.assertEqual(len(self.notices("待人工提醒")),1)
 
 
+class HealthAlertTests(unittest.TestCase):
+    """A flapping component must not page on every sample, and an incident stays a short message."""
+    def setUp(self):
+        self.temp=tempfile.TemporaryDirectory()
+        self.store=Store(self.temp.name)
+        self.store.put("last_plan_at",(NOW-timedelta(minutes=1)).isoformat())
+        self.store.put("closed:"+(NOW-timedelta(days=1)).date().isoformat(),{"already":True})
+    def tearDown(self):
+        self.store.close()
+        self.temp.cleanup()
+
+    def snapshot(self,components=(),health=None,collection_error=None):
+        snap=sample()
+        item=snap["instances"][0]
+        item.update(health=health or ("online_degraded" if components else "reachable"),
+                    errorComponents=list(components),collectionError=collection_error)
+        item["components"]={name:{"state":"error","code":"pollFailures","at":NOW.isoformat(),
+                                   "detail":"3 consecutive failed polls; last: network"} for name in components}
+        return snap
+
+    def plan_at(self,snap,at):
+        snap=dict(snap)
+        snap["windowEnd"]=snap["collectedAt"]=at.isoformat()
+        with patch("service.binding",return_value=("oc_target","cli","configdir")):
+            plan(self.store,{"instances":[{"id":"test"}]},snap,at)
+
+    def messages(self,kind=None):
+        rows=self.store.db.execute("SELECT payload FROM outbox").fetchall()
+        payloads=[json.loads(row["payload"]) for row in rows]
+        return [payload for payload in payloads if kind is None or payload.get("kind")==kind]
+
+    def accept_alerts(self,at):
+        with self.store.db:
+            self.store.db.execute("UPDATE outbox SET state='channel_accepted',accepted=? WHERE payload LIKE ?",
+                                  (at.timestamp(),'%异常健康报告%'))
+
+    def test_component_alert_waits_for_confirmation_and_stays_compact(self):
+        snap=self.snapshot(["github"])
+        self.plan_at(snap,NOW+timedelta(minutes=1))
+        self.plan_at(snap,NOW+timedelta(minutes=2))
+        self.assertEqual(self.messages("异常健康报告"),[])
+        self.plan_at(snap,NOW+timedelta(minutes=3))
+        alerts=self.messages("异常健康报告")
+        self.assertEqual(len(alerts),1)
+        text=alerts[0]["text"]
+        self.assertIn("**异常说明**",text)
+        self.assertIn("github",text)
+        self.assertIn("轮询连续失败",text)
+        self.assertIn("最近错误",text)
+        self.assertNotIn("**会话**",text)
+        self.assertNotIn("**工单**",text)
+        self.assertNotIn("**任务投入**",text)
+
+    def test_transient_component_error_sends_nothing(self):
+        snap=self.snapshot(["github"])
+        self.plan_at(snap,NOW+timedelta(minutes=1))
+        self.plan_at(snap,NOW+timedelta(minutes=2))
+        healthy=self.snapshot()
+        for offset in range(3,6):
+            self.plan_at(healthy,NOW+timedelta(minutes=offset))
+        self.assertEqual(self.messages(),[])
+
+    def test_collection_outage_keeps_its_three_failure_confirmation(self):
+        down=self.snapshot(health="unknown",collection_error="transport_or_schema")
+        self.plan_at(down,NOW+timedelta(minutes=1))
+        self.plan_at(down,NOW+timedelta(minutes=2))
+        self.assertEqual(self.messages("异常健康报告"),[])
+        self.plan_at(down,NOW+timedelta(minutes=3))
+        text=self.messages("异常健康报告")[0]["text"]
+        self.assertIn("采集失败",text)
+        self.assertIn("transport_or_schema",text)
+
+    def test_recovery_after_a_collection_outage_names_the_collection_failure(self):
+        down=self.snapshot(health="unknown",collection_error="transport_or_schema")
+        for offset in range(3):
+            self.plan_at(down,NOW+timedelta(minutes=offset))
+        self.accept_alerts(NOW+timedelta(minutes=2))
+        for offset in range(3,6):
+            self.plan_at(self.snapshot(),NOW+timedelta(minutes=offset))
+        recoveries=self.messages("恢复报告")
+        self.assertEqual(len(recoveries),1)
+        self.assertIn("采集失败 transport_or_schema 已恢复",recoveries[0]["text"])
+
+    def test_recovery_names_time_and_cause_without_the_full_inventory(self):
+        snap=self.snapshot(["github"])
+        snap["instances"][0]["sessions"]=[{"id":"worker-1","role":"worker","events":{}}]
+        snap["instances"][0]["tickets"]=[{"id":"t1","title":"语义本体工单","stage":"ended",
+                                          "recap":{"text":"完成","quality":"x"},"effort":None}]
+        snap["instances"][0]["taskEffort"]=[{"ticketId":"t1","title":"语义本体工单","outcome":"completed",
+                                             "elapsedSeconds":60,"inputRounds":1,"handoffRounds":1,
+                                             "tokens":{"input":1,"output":1}}]
+        for offset in range(3):
+            self.plan_at(snap,NOW+timedelta(minutes=offset))
+        self.accept_alerts(NOW+timedelta(minutes=2))
+        healthy=self.snapshot()
+        for offset in range(3,6):
+            self.plan_at(healthy,NOW+timedelta(minutes=offset))
+        recoveries=self.messages("恢复报告")
+        self.assertEqual(len(recoveries),1)
+        text=recoveries[0]["text"]
+        self.assertIn("**恢复时点**",text)
+        self.assertIn("github",text)
+        self.assertIn("**原因说明**",text)
+        self.assertIn("连续 3 次采集成功",text)
+        self.assertNotIn("**会话**",text)
+        self.assertNotIn("**工单**",text)
+        self.assertNotIn("**任务投入**",text)
+        self.assertNotIn("语义本体工单",text)
+
+    def test_a_single_green_sample_after_a_long_outage_does_not_recover(self):
+        # Degraded samples must not count toward the recovery streak: otherwise the first green
+        # sample would satisfy it after any outage longer than the confirmation window.
+        snap=self.snapshot(["github"])
+        for offset in range(3):
+            self.plan_at(snap,NOW+timedelta(minutes=offset))
+        self.accept_alerts(NOW+timedelta(minutes=2))
+        for offset in range(3,9):
+            self.plan_at(snap,NOW+timedelta(minutes=offset))
+        self.plan_at(self.snapshot(),NOW+timedelta(minutes=9))
+        self.assertEqual(self.messages("恢复报告"),[])
+        for offset in range(10,12):
+            self.plan_at(self.snapshot(),NOW+timedelta(minutes=offset))
+        self.assertEqual(len(self.messages("恢复报告")),1)
+
+    def test_queued_alert_is_dropped_instead_of_being_followed_by_a_recovery(self):
+        # A component error during quiet hours would otherwise deliver alert and recovery together at 08:00.
+        night=NOW.replace(hour=23)
+        self.store.put("last_plan_at",(night-timedelta(minutes=1)).isoformat())
+        snap=self.snapshot(["github"])
+        for offset in range(3):
+            self.plan_at(snap,night+timedelta(minutes=offset))
+        self.assertEqual(len(self.messages("异常健康报告")),1)
+        healthy=self.snapshot()
+        for offset in range(3,6):
+            self.plan_at(healthy,night+timedelta(minutes=offset))
+        states=dict(self.store.db.execute("SELECT key,state FROM outbox").fetchall())
+        self.assertTrue(states)
+        self.assertTrue(all(state=="superseded" for state in states.values()))
+        self.assertEqual(self.messages("恢复报告"),[])
+
+    def test_delivered_alert_is_not_repeated_inside_the_cooldown(self):
+        snap=self.snapshot(["github"])
+        for offset in range(3):
+            self.plan_at(snap,NOW+timedelta(minutes=offset))
+        self.assertEqual(len(self.messages("异常健康报告")),1)
+        self.accept_alerts(NOW+timedelta(minutes=2))
+        healthy=self.snapshot()
+        for offset in range(3,6):
+            self.plan_at(healthy,NOW+timedelta(minutes=offset))
+        self.assertEqual(len(self.messages("恢复报告")),1)
+        changed=self.snapshot(["history"])
+        for offset in range(7,10):
+            self.plan_at(changed,NOW+timedelta(minutes=offset))
+        self.assertEqual(len(self.messages("异常健康报告")),1)
+        for offset in range(19,22):
+            self.plan_at(changed,NOW+timedelta(minutes=offset))
+        self.assertEqual(len(self.messages("异常健康报告")),2)
+
+
 class HumanItemIdentityTests(unittest.TestCase):
     """Collecting a ticket that merely changed must not turn the same pending question into a new alert."""
     def test_updated_ticket_keeps_revision_and_exposes_activity_time(self):
@@ -623,3 +782,4 @@ class GroupAndRevisionTests(unittest.TestCase):
 
 if __name__=="__main__":
     unittest.main(verbosity=2)
+

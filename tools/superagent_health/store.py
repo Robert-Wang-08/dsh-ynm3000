@@ -88,6 +88,13 @@ class Store:
         row=self.db.execute("SELECT state FROM outbox WHERE key=?",(key,)).fetchone()
         return row["state"] if row else None
 
+    def supersede_group(self,group):
+        """Cancel queued parts of one report that was never accepted; an in-flight part stays."""
+        with self.db:
+            return self.db.execute(
+                "UPDATE outbox SET state='superseded',lease=NULL WHERE key LIKE ? AND state IN ('pending','retry_wait','needs_attention')",
+                (group+"-%",)).rowcount
+
     def stats(self):
         return dict(self.db.execute("SELECT state,count(*) FROM outbox GROUP BY state").fetchall())
 
