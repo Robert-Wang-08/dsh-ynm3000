@@ -40,3 +40,7 @@ AGENTS.md.bak-*
 a-prime-demo.txt
 *.tgz
 *.tar.gz
+
+# dsh-superagent-patch：独立辅助仓（适配补丁 + 上游同步脚本），非运行时依赖。
+# 本地已 git init+commit；推送 github 后如需跨设备，再 git submodule add 或独立 clone。
+dsh-superagent-patch/
