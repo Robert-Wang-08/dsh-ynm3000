@@ -139,11 +139,20 @@ def plan(store,config,snapshot,now):
             else:
                 # The same question still waits; only its snapshot moved, so it keeps its notice and reminders.
                 state["revision"]=issue["revision"]
+            # A notice superseded while it was still queued (the revision formula changed in this version,
+            # so an in-flight notice from the previous version goes stale at dispatch) would otherwise stay
+            # dead: plan only enqueues when sentKey is empty and accepted_at() never sees a superseded row.
+            # Bump the episode so the retry gets a new key instead of colliding with the superseded row.
+            if state.get("sentKey") and store.state_of(state["sentKey"]) in (None,"superseded"):
+                state["episode"]=state.get("episode",0)+1
+                state["sentKey"]=None
+                state["reminders"]=0
             if state.get("reminderDay")!=now.date().isoformat():
                 state.update(reminderDay=now.date().isoformat(),reminders=0)
             # The first notice waits for the ticket to stay unchanged: a person answering in the source
             # thread bumps updatedAt and restarts this window, so the notice no longer interrupts a reply.
-            updated=instant(issue.get("updatedAt")) or now
+            # An unreadable updatedAt must not silence the notice forever: fall back to the pre-settle behavior.
+            updated=instant(issue.get("updatedAt")) or (now-timedelta(seconds=settle))
             if state.get("sentKey") is None and (now-min(updated,now)).total_seconds()>=settle:
                 key=ident+":"+str(state["episode"])+":"+issue["revision"]
                 group=enqueue_report(store,config,snapshot,key,"待人工事项",issue={"id":ident,"revision":issue["revision"],"issueId":ident,"instanceId":item["id"],"ticketId":issue.get("ticketId"),"question":issue.get("question"),"reason":issue.get("reason"),"deadline":issue.get("deadline")})
