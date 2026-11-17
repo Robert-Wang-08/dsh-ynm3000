@@ -1,6 +1,7 @@
 """Behavioral checks for health evidence and reliable delivery boundaries."""
 import json
 import os
+import shutil
 import subprocess
 import tempfile
 import unittest
@@ -11,6 +12,7 @@ from common import CST, instant, safe_text, digest
 from events import fold_events
 from collect import instance, report_from_detail, tickets, effort_from_detail
 from delivery import send, binding_id, DeliveryError
+from deploy import deployment_state
 from render import chunks, render, render_attention, report_text
 from store import Store
 from service import quiet, next_open, plan, dispatch, enqueue_report, settle_seconds, tick
@@ -779,6 +781,145 @@ class GroupAndRevisionTests(unittest.TestCase):
                 sender.assert_not_called()
             self.assertEqual(store.stats(),{"needs_attention":1})
             store.close()
+
+class _GitResult:
+    def __init__(self,stdout="",returncode=0,stderr=""):
+        self.stdout,self.stderr,self.returncode=stdout,stderr,returncode
+
+def fake_git(answers):
+    calls=[]
+    def runner(argv,**kwargs):
+        calls.append(" ".join(argv[3:]))
+        value=answers.get(" ".join(argv[3:]))
+        if isinstance(value,_GitResult):
+            return value
+        if value is None:
+            return _GitResult("",1,"missing")
+        return _GitResult(value)
+    runner.calls=calls
+    return runner
+
+class DeploymentGuardTests(unittest.TestCase):
+    """The scheduled task runs this checkout in place, so a merge is not live until it is fast-forwarded."""
+    def state(self,**overrides):
+        answers={"rev-parse --abbrev-ref HEAD":"main",
+                 "rev-parse HEAD":"a"*40,
+                 "rev-parse --verify origin/main":"a"*40,
+                 "rev-list --count --left-right origin/main...HEAD":"0\t0",
+                 "status --porcelain -- .":""}
+        answers.update(overrides)
+        return deployment_state(Path("C:/repo"),runner=fake_git(answers))
+
+    def test_main_tip_is_reported_without_a_warning(self):
+        state=self.state()
+        self.assertEqual(state["quality"],"observed")
+        self.assertTrue(state["current"])
+        snap=sample()
+        snap["deployment"]=state
+        text=render(snap)
+        self.assertIn("运行代码 main@aaaaaaaaaaaa",text)
+        self.assertNotIn("部署警告",text)
+
+    def test_a_tree_behind_main_warns_with_the_fast_forward_step(self):
+        state=self.state(**{"rev-parse HEAD":"b"*40,
+                            "rev-list --count --left-right origin/main...HEAD":"2\t0"})
+        self.assertFalse(state["current"])
+        self.assertEqual(state["behind"],2)
+        self.assertIn("behind",state["reasons"])
+        snap=sample()
+        snap["deployment"]=state
+        text=render(snap)
+        self.assertIn("**部署警告**",text)
+        self.assertIn("落后 main 2 个提交",text)
+        self.assertIn("git merge --ff-only origin/main",text)
+
+    def test_a_feature_branch_is_not_a_deployment(self):
+        state=self.state(**{"rev-parse --abbrev-ref HEAD":"agent/fix",
+                            "rev-parse HEAD":"b"*40,
+                            "rev-list --count --left-right origin/main...HEAD":"0\t1"})
+        self.assertFalse(state["current"])
+        self.assertIn("branch",state["reasons"])
+        self.assertIn("ahead",state["reasons"])
+        snap=sample()
+        snap["deployment"]=state
+        text=render(snap)
+        self.assertIn("在分支 agent/fix 上",text)
+        self.assertIn("领先 main 1 个提交",text)
+
+    def test_missing_remote_ref_falls_back_to_the_local_branch(self):
+        state=self.state(**{"rev-parse --verify origin/main":_GitResult("",1,"no such ref"),
+                            "rev-parse --verify main":"a"*40,
+                            "rev-list --count --left-right main...HEAD":"0\t0"})
+        self.assertEqual(state["quality"],"observed")
+        self.assertTrue(state["current"])
+
+    def test_uncommitted_tool_changes_are_not_the_main_version(self):
+        state=self.state(**{"status --porcelain -- .":" M tools/superagent_health/service.py\n?? tools/superagent_health/extra.py\n"})
+        self.assertFalse(state["current"])
+        self.assertEqual(state["reasons"],["dirty"])
+        self.assertEqual(len(state["dirty"]),2)
+        snap=sample()
+        snap["deployment"]=state
+        text=render(snap)
+        self.assertIn("2 个健康工具文件未提交（service.py、extra.py）",text)
+        self.assertIn("有未提交改动",text)
+
+    def test_unreadable_git_is_unknown_not_a_warning(self):
+        state=self.state(**{"rev-parse --abbrev-ref HEAD":_GitResult("",1,"fatal: not a repository")})
+        self.assertEqual(state["quality"],"unknown")
+        self.assertIsNone(state["current"])
+        self.assertIn("RuntimeError",state["detail"])
+        snap=sample()
+        snap["deployment"]=state
+        text=render(snap)
+        self.assertIn("运行代码未知",text)
+        self.assertNotIn("部署警告",text)
+
+    def test_an_incident_notice_carries_the_deployment_warning_and_stays_short(self):
+        snap=sample()
+        snap["deployment"]=self.state(**{"rev-parse --abbrev-ref HEAD":"agent/fix",
+                                         "rev-parse HEAD":"b"*40,
+                                         "rev-list --count --left-right origin/main...HEAD":"0\t1"})
+        text=report_text(snap,"异常健康报告",health={"instanceId":"test"})
+        self.assertIn("**部署警告**",text)
+        self.assertIn("异常说明",text)
+        self.assertLess(len(text),1200)
+
+    def test_tick_records_the_deployment_state_in_the_heartbeat(self):
+        state=self.state()
+        with tempfile.TemporaryDirectory() as directory:
+            config={"state_dir":directory,"instances":[{"id":"test"}]}
+            with patch("service.collect",return_value=sample()),patch("service.deployment_state",return_value=state):
+                tick(config,allow_send=False)
+            heartbeat=json.loads((Path(directory)/"heartbeat.json").read_text(encoding="utf-8"))
+            self.assertEqual(heartbeat["deployment"],state)
+            report=(Path(directory)/"latest.md").read_text(encoding="utf-8")
+            self.assertIn("运行代码 main@aaaaaaaaaaaa",report)
+
+    @unittest.skipUnless(shutil.which("git"),"git is not installed")
+    def test_real_repository_detects_a_stale_checkout(self):
+        with tempfile.TemporaryDirectory() as directory:
+            def git(*args):
+                return subprocess.run(["git","-C",directory,*args],capture_output=True,text=True,check=True).stdout.strip()
+            git("init","-q")
+            git("symbolic-ref","HEAD","refs/heads/main")
+            git("-c","user.email=t@example.com","-c","user.name=t","commit","-q","--allow-empty","-m","one")
+            git("update-ref","refs/remotes/origin/main",git("rev-parse","HEAD"))
+            state=deployment_state(Path(directory))
+            self.assertEqual(state["quality"],"observed")
+            self.assertTrue(state["current"],state)
+            git("checkout","-q","-b","next")
+            git("-c","user.email=t@example.com","-c","user.name=t","commit","-q","--allow-empty","-m","two")
+            git("update-ref","refs/remotes/origin/main",git("rev-parse","HEAD"))
+            git("checkout","-q","main")
+            stale=deployment_state(Path(directory))
+            self.assertFalse(stale["current"])
+            self.assertEqual(stale["reasons"],["behind"],stale)
+            self.assertEqual(stale["behind"],1)
+            (Path(directory)/"note.txt").write_text("uncommitted",encoding="utf-8")
+            dirty=deployment_state(Path(directory))
+            self.assertIn("dirty",dirty["reasons"])
+            self.assertEqual(dirty["dirty"],["note.txt"])
 
 if __name__=="__main__":
     unittest.main(verbosity=2)
