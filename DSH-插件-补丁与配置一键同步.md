@@ -34,6 +34,22 @@
 
 ## 2. 一键同步
 
+### 2.0 一键同步 web + superagent（日常设备推荐）
+
+`web` 与 `superagent` 两个 profile 同时更新用一条命令：
+
+```powershell
+pwsh -File D:\src\dsh\dsh-sync.ps1                  # 更新 web，并镜像到 superagent
+pwsh -File D:\src\dsh\dsh-sync.ps1 -DryRun          # 只出计划
+pwsh -File D:\src\dsh\dsh-sync.ps1 -SkipPackUpdate  # link 开发态：只做 superagent 镜像
+```
+
+它先按 2.1 的方式更新 web（发布版；link 开发态跳过），再把 web 的依赖、bundle 顺序与
+`cordis.patch.yml` 镜像到 superagent，保留 superagent 独有依赖/插件与自有 patch 段，
+最后对两个 profile 各跑一次 `--dump-config` 验收。写前默认拒绝宿主正在运行的 profile；
+镜像备份与规则见 [superagent profile 运维文档](docs/ops/superagent-profile.md) 第 9 节。
+这是 `web` + `superagent` 日常升级的入口；下面的单 profile 步骤用于精确控制。
+
 ### 2.1 装 / 升级通用配置包（推荐入口）
 
 ```powershell

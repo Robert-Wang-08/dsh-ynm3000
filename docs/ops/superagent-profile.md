@@ -70,9 +70,11 @@ pnpm build                            # tsdown，产物 lib/ 12 个文件，lib/
 
 web profile 基线 `C:\Users\wang\.dsh\profiles\web` 被复制的文件：`package.json`、`cordis.yml`、`cordis.patch.yml`、`pnpm-workspace.yaml`、`pnpm-lock.yaml`、`.npmrc`、`patches/`。`package.json` 的 `name` 改为 `dsh-profile-superagent`（原 `dsh-profile-web`）。不复制 `node_modules`。
 
-然后在 superagent 的 `cordis.patch.yml` **末尾追加**（保留 web 原有全部内容）：
+然后在 superagent 的 `cordis.patch.yml` **末尾追加**（保留 web 原有全部内容；标记行是
+`dsh-superagent-profile-sync.ps1` 识别自有覆盖段的依据，不要删）：
 
 ```yaml
+# ── dsh-superagent 本机配置（同步脚本按此标记保留自有覆盖）
 - id: webserver
   config:
     host: 127.0.0.1
@@ -168,3 +170,25 @@ err 日志只剩 `UNDICI-EHPA` 代理实验性警告与 `SQLite is an experiment
 - 面板 URL 带 token，重启会变。
 
 > 本文事实来源：2026-11-10 本机实测，命令与输出见正文。
+
+## 9. web → superagent 插件与配置同步（2026-11-17）
+
+`superagent` 是 `web` 的副本 + 自有覆盖。web 的插件或配置变化后，用一键入口同步，不要手工改两遍：
+
+```powershell
+pwsh -File dsh-sync.ps1                  # 更新 web（发布版）并镜像到 superagent
+pwsh -File dsh-sync.ps1 -DryRun          # 只出计划，不写文件
+pwsh -File dsh-sync.ps1 -SkipPackUpdate  # link 开发态：只做 superagent 镜像
+```
+
+镜像规则（`dsh-superagent-profile-sync.ps1` 是唯一实现）：
+
+- `dependencies` = web 全部依赖 + superagent 独有依赖（不写死插件名，当前是 `dsh-superagent`、`dsh-plugin-eye-care-bg` 等），spec 原样继承。
+- `dsh.profile.bundles` = web 顺序 + superagent 独有 bundle，`dsh-config-pack` 移到最后；`dsh.profile` 的其它键（`patchReload` 等）保留。
+- `cordis.patch.yml` = web 全量 + 标记行之后的自有覆盖段。支持的标记：`# ── dsh-superagent 本机配置`、`# ===== dsh-superagent 本 profile 自有覆盖`、`# ===== superagent 自有覆盖`。找不到标记且内容与 web 不同时默认失败，不会静默丢掉本机覆盖；确要保留目标 patch 用 `-KeepTargetPatch`。
+- 复制 `vendor/`、`patches/`、`compatibility.json`、`pnpm-lock.yaml`，并给 `pnpm-workspace.yaml` 补齐 `blockExoticSubdeps: false`。
+- 写前备份到 `%USERPROFILE%\.dsh\backups\superagent-profile-sync-<UTC>`（含 `MANIFEST.json`）；配置或依赖有变化才 `pnpm install`；最后跑 `dsh --profile superagent --dump-config` 组合校验。
+- 目标宿主正在运行时默认拒绝写入（退出码 3）：先 `pwsh -File dsh-superagent-service.ps1 stop`，同步后再 `start`。`-SkipHostGuard` 只用于明确接受热改的场景。
+- 脚本不含设备绝对路径（旧版写死 `D:/src/dsh-superagent`、`C:/Users/wwm_1`），可跨机使用；回滚直接取备份目录里的 `MANIFEST.json` 与对应文件。
+
+测试：`pwsh -File scripts/test-dsh-sync.ps1`（合成 profile，覆盖保留语义、幂等、DryRun、缺标记保护与一键入口顺序/失败中断）。

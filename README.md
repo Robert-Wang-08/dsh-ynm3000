@@ -85,7 +85,18 @@ flowchart TD
 
 ## 已安装设备一键更新
 
-双机装好之后，插件与配置层升级**不需要重跑安装流程**，一条命令同步到远端最新发布版本：
+双机装好之后，插件与配置层升级**不需要重跑安装流程**。日常设备（`web` + `superagent` 两个 profile）用一条命令同时更新两个 profile：
+
+```powershell
+pwsh -File dsh-sync.ps1                    # 更新 web，并镜像到 superagent（推荐）
+pwsh -File dsh-sync.ps1 -DryRun            # 只出计划，不写任何文件
+pwsh -File dsh-sync.ps1 -Profiles web      # 单 profile 设备
+pwsh -File dsh-sync.ps1 -SkipPackUpdate    # link 开发态：只做 superagent 镜像
+```
+
+`dsh-sync.ps1` 做：解析 web 的 `dsh-config-pack` 来源 → 发布版走 `update.ps1` 全流程（远端最新 tag、pnpm 前置、bundle 登记、偏差验收），`link:` 开发态跳过发布版更新（先 `git pull` 对应仓库）→ 把 web 的依赖、bundle 顺序与 `cordis.patch.yml` 镜像到 `superagent`（保留 superagent 独有依赖/插件，以及该 profile 自己的 patch 覆盖段，`dsh-config-pack` 始终排最后）→ 两个 profile 各跑一次 `dsh --profile <p> --dump-config` 组合校验。写入前默认拒绝宿主正在运行的 profile；确认要热改时加 `-SkipHostGuard`。镜像前置备份写在 `%USERPROFILE%\.dsh\backups\superagent-profile-sync-<UTC>`。
+
+低层单 profile 入口仍是 `dsh-config-pack\scripts\update.ps1`：
 
 ```powershell
 pwsh -File dsh-config-pack\scripts\update.ps1                     # packed profile，自动取远端最新 tag
@@ -95,7 +106,7 @@ pwsh -File dsh-config-pack\scripts\update.ps1 -SkipOptional       # 不动可选
 
 `update.ps1` 做：解析远端最新发布 tag → 与本机已装版本比较（已是最新直接退出，`-Force` 强制重跑）→ 复用 `install.ps1` 全流程（pnpm 前置 + pack 与可选组一次多 spec add + 组件 bundle 显式登记 + lib 构建 + `verify-install` 偏差比较验收）。更新完成后**重启 DSH 并新开会话**（工具表随会话冻结）。
 
-边界：设备个人答案与密钥不动（密钥只在用户环境变量）；云盘 `route-config.json` / 个人答案有变更时用 `pwsh scripts/setup.ps1 -UpdateRoutes` 同步路由；源设备 `web` 这类 link: 开发态 profile，`git pull` + 重启即生效，不走本流程。
+边界：设备个人答案与密钥不动（密钥只在用户环境变量）；云盘 `route-config.json` / 个人答案有变更时用 `pwsh scripts/setup.ps1 -UpdateRoutes` 同步路由；源设备 `web` 这类 link: 开发态 profile，`git pull` + 重启即生效，不走发布版更新。`dsh-sync.ps1` 不会自动拉取 Git 仓库，也不重启任何服务；superagent 镜像的规则、备份与回滚见 [superagent profile 运维文档](docs/ops/superagent-profile.md)。
 
 ## 双向插件清单同步
 
