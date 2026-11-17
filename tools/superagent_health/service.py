@@ -11,6 +11,7 @@ from pathlib import Path
 from common import CST, digest, instant, load_config, atomic_text
 from collect import collect
 from delivery import send, binding, binding_id, DeliveryError
+from deploy import deployment_state
 from render import report_text, render, chunks
 from store import Store
 
@@ -289,6 +290,10 @@ def tick(config,allow_send=False):
         try:
             cache=store.get("event_cache",{})
             snapshot=collect(config,cache)
+            # The scheduled task runs this checkout in place: a merge to main does not take
+            # effect until the tree is fast-forwarded, so surface that gap instead of letting
+            # a stale tree silently keep computing alerts with older logic.
+            snapshot["deployment"]=deployment_state(config.get("repo_root"))
             store.put("event_cache",cache)
             store.put("last_snapshot",snapshot)
             atomic_text(directory/"latest.json",json.dumps(snapshot,ensure_ascii=False,indent=2))
@@ -299,7 +304,7 @@ def tick(config,allow_send=False):
                 binding(config)
                 plan(store,config,snapshot,datetime.now(CST))
                 dispatch(store,config,snapshot)
-            heartbeat={"at":datetime.now(CST).isoformat(),"mode":"send_enabled" if allow_send else "dry-run","instances":len(snapshot["instances"]),"outbox":store.stats()}
+            heartbeat={"at":datetime.now(CST).isoformat(),"mode":"send_enabled" if allow_send else "dry-run","instances":len(snapshot["instances"]),"deployment":snapshot["deployment"],"outbox":store.stats()}
             atomic_text(directory/"heartbeat.json",json.dumps(heartbeat))
             print(json.dumps(heartbeat))
             return snapshot

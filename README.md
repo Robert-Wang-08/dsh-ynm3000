@@ -33,6 +33,13 @@ git clone --recurse-submodules https://github.com/Robert-Wang-08/dsh-ynm3000.git
 - `dsh-plugin-subagent-monitor`
 - `dsh-plugin-session-id`
 - `dsh-subagent-acp-resilient`
+- `dsh-plugin-sidebar-panel-area`
+- `dsh-plugin-superagent-appearance`
+- `dsh-plugin-eye-care-bg`
+
+`dsh-plugin-subagent-monitor`、`dsh-subagent-acp-resilient` 已有独立远程仓库（`Robert-Wang-08/dsh-plugin-subagent-monitor`、`Robert-Wang-08/dsh-subagent-acp-resilient`），本仓保留同版本源码副本供 profile 以 `link:` 登记（`packed` profile 走 GitHub tag 安装）。
+
+> `dsh-superagent` 在本仓内只有 gitlink（工作树为空），superagent profile 的 `link:` 实际指向兄弟检出 `D:\src\dsh-superagent`（其 `origin` 是上游 `deepseek-ai/dsh-superagent-prototype`，不是维护 fork）。换设备时先决定取哪个源，见 [docs/ops/superagent-profile.md](docs/ops/superagent-profile.md)。
 
 根目录的 `dsh-menu.ps1` 是本机运维入口。公开发布的一键安装仍走 `dsh-config-pack` 的 GitHub tag，不从本仓库安装。
 
@@ -41,6 +48,8 @@ git clone --recurse-submodules https://github.com/Robert-Wang-08/dsh-ynm3000.git
 仓库脚本服务已提供心跳/组件状态、实际响应模型、今日关联会话、可追溯recap、未完成与工单人工事项，以及SQLite可靠发送队列。默认发送关闭；核实管理人和bot绑定后可安装每分钟采样任务。独立于DSH profile，无需重启宿主。
 
 运行、绑定、验收与回滚见 [健康报告操作手册](docs/ops/superagent-health-report.md)；服务入口为 [service.py](tools/superagent_health/service.py)。dashboard用量保持可降级：认证和worker扫描覆盖未满足时不报告完整消耗金额。
+
+换另一台设备从零部署这套机制（依赖、设备配置、投递绑定、计划任务与验收清单）见 [跨设备部署说明](docs/ops/superagent-health-cross-device.md)。
 
 ## 新设备安装
 
@@ -189,7 +198,7 @@ dsh plugin --profile web add D:\src\dsh\dsh-plugin-session-id
 | `dsh-chat-import` | 0.25.2 | 外部聊天记录导入（interchange v1） |
 | `dsh-mermaid-smooth` | 0.1.0 | mermaid 图渲染体验优化 |
 | `dsh-notify-bell` | 0.12.0 | 桌面通知铃（上游无 repository 字段，按 npm 包名+版本定位） |
-| `dsh-embedded-browser` | —（当前 profile 未启用） | **右侧栏内嵌浏览器**：一个 Chromium 跑在 DSH 宿主里，每个会话有自己的标签页；AI 用 `browser_embedded_*`（CDP）读页/点击/填表/截图，人在右侧栏同一个标签页里接管（登录、扫码、短信码、CAPTCHA），所有会话共享一个持久 profile，登录一次到处可用。当前 web/packed 均未登记该插件，以下配置仅启用时参考 |
+| `dsh-embedded-browser` | 0.3.0 | **右侧栏内嵌浏览器**：一个 Chromium 跑在 DSH 宿主里，每个会话有自己的标签页；AI 用 `browser_embedded_*`（CDP）读页/点击/填表/截图，人在右侧栏同一个标签页里接管（登录、扫码、短信码、CAPTCHA），所有会话共享一个持久 profile，登录一次到处可用。已在 web、superagent 登记，`browserPath`/`lazyTools` 配置见下 |
 
 内嵌浏览器在本机有两处必须显式配置的差异（换设备先核对，否则插件装了也不工作）：
 
@@ -229,7 +238,7 @@ dsh plugin --profile web add D:\src\dsh\dsh-plugin-session-id
 - **密钥指针**：`DSHPACK_KEY_*` 只写引用名，真实值在用户环境变量，装完打印缺失清单
 - 每个组件**钉不可变 annotated tag + 解引用 commit**（`verify-components` 联网强制），装完跑 `verify-install.mjs` 偏差比较验收
 
-## 插件与 Bundle 登记（2026-11-10 基线：DSH 0.2.1-rc.5）
+## 插件与 Bundle 登记（2026-11-17 基线：DSH 0.2.1-rc.5）
 
 > 本节是当前工作区与 `web` profile 的权威登记。新增、升级、替换或停用插件，以及调整 profile bundle 顺序时，必须同步更新本节；未更新视为变更未完成（见 `AGENTS.md` §10）。
 > “兼容 DSH”优先取 `peerDependencies` / `engines`；没有显式声明的写“运行时验证”。
@@ -259,15 +268,15 @@ dsh plugin --profile web add D:\src\dsh\dsh-plugin-session-id
 | `@local/dsh-subagent-acp-resilient` | 0.2.3（root 仓库跟踪） | peer 精确 0.2.1-rc.5 | web、plugintest、superagent、packed | 0.2.2 把上游 cause 明细透传；0.2.3 当前兼容版本 |
 | `dsh-plugin-subagent-monitor` | 0.1.0 @ tag `v0.1.0` | 运行时验证 | web | v0.1.0 子代理面板：实际路由徽标、keepalive、后台输出环、打开子会话 |
 | `dsh-plugin-subagent-director` | 0.6.0-beta.2 | 运行时验证 | web | 0.6 beta：按角色/调用参数选择 provider/model |
-| `dsh-plugin-new-session` | 0.2.0（root 仓库跟踪） | 运行时验证 | 工作区登记；当前 profile 未启用 | 0.2.0 `new_session` 创建独立顶层会话 |
 | `dsh-plugin-session-id` | 0.1.0（root 仓库跟踪） | 运行时验证（无 peer/engines 声明） | 工作区登记；当前 profile 未启用 | 0.1.0 会话头部「会话 ID」按钮：显示/复制 Session ID；执行器会话解析并复制 SuperAgent 工单 ID |
-| `dsh-plugin-ptc-switches` | 0.2.0（root 仓库跟踪） | 运行时验证 | packed | 0.2.0 PTC 模式热切换 UI |
+| `dsh-plugin-new-session` | 0.2.0（root 仓库跟踪） | 运行时验证 | web、plugtest、sa-local、superagent（`link:`） | 0.2.0 `new_session` 创建独立顶层会话 |
+| `dsh-plugin-ptc-switches` | 0.2.0（root 仓库跟踪） | 运行时验证 | web、plugtest、sa-local、superagent、web-restore（`link:`） | 0.2.0 PTC 模式热切换 UI |
 | `@local/dsh-ptc-multi-agent-mode` | bundle 0.3.0（公共源 v0.16.1） | 运行时验证；声明依赖仍写 0.2.0-rc.2 | web、packed | 可移植 PTC 多代理预设与 Codex/Kimi/Claude/OpenCode/Cursor 路由 |
 | `@local/dsh-preset-failover-tiers` | 0.1.0 @ `b373d1a` | 运行时验证 | web、plugintest | v0.1.0 便携档位表：模型族对齐 tier + transport-safe 终止码 |
 | `dsh-codex-cred-sync` | 1.0.0 @ `8f4586e` | 运行时验证 | web、plugintest | v0.1.0 同步 `llm-pi-ai/<provider>` 与 `~/.pi/agent/auth.json`，最新过期时间优先 |
 | `dsh-permission-compat` | 0.1.0 @ `a8e7e8b` | 0.2.1-rc.5 安装钉适配 | 带外工具，不挂 profile | 0.1.0 适配 0.2.1-rc.5 安装钉与诊断补丁 |
 | `dsh-superagent` | 0.1.0 @ `c0b7df4`（维护 fork） | engines dsh `^0.2.1-alpha.2`，0.2.1-rc.5 满足 | 独立 profile `superagent`，端口 3082 | 2026-11-13 原有 Feishu 回复修复已推送维护 fork：私聊不带 reply-in-thread，前导 @ 避免 CLI 文件展开；不含缓存兜底；Windows `stateDir` 绝对路径补丁见 `docs/ops/superagent-profile.md`；恢复核实与设置补录见 `docs/ops/superagent-restore-20261110.md` |
-| `dsh-plugin-eye-care-bg` | 0.1.0（root 仓库跟踪） | 运行时验证（无 peer/engines 声明） | 仅 `superagent`（3082 面板） | 0.1.0 护眼页面底色 `#C7EDCC`：纯客户端 CSS 注入，覆盖主题令牌 `--dsw-alias-bg-base`，不注册端点、不持凭据 |
+| `dsh-plugin-eye-care-bg` | 0.1.0（root 仓库跟踪） | 运行时验证（无 peer/engines 声明） | 无（当前未注册到任何 profile，源码保留备用） | 0.1.0 护眼页面底色 `#C7EDCC`：纯客户端 CSS 注入，覆盖主题令牌 `--dsw-alias-bg-base`，不注册端点、不持凭据 |
 | `dsh-wechat-hitl` | submodule（HEAD `91b11ed`；workspace package 无 `version` 字段） | 运行时验证（无 `peerDependencies` / `engines` 声明） | web、headless、superagent、plugtest（目录副本 + `- insert: wechat-hitl` 挂载） | 2026-11-14 更正本行：已是带 `.git` 的子模块，且四个 profile 的 `cordis.patch.yml` 均挂载（旧记「无 `.git`、未在 web 挂载」已失准）；2026-11-13 入站去重、出站配置阻塞与失败留痕加固 |
 | `dsh-chat-import` | 0.25.2（npm 最新 0.26.4） | peer dsh `>=0.1.5-rc.1` | web | 外部聊天记录导入，保留工具调用/推理/结果 |
 | `dsh-mermaid-smooth` | 0.1.0 | 运行时验证 | web | Mermaid 默认渲染与平滑缩放/平移 |
@@ -275,7 +284,7 @@ dsh plugin --profile web add D:\src\dsh\dsh-plugin-session-id
 | `dsh-palette` | 0.2.1 | 运行时验证 | web | Command palette（⌘K） |
 | `dsh-recent-sessions` | 0.1.2 | 运行时验证 | web | 跨工作区最近会话面板 |
 | `dshmarket` | 1.66.21 | 运行时验证 | web | 插件市场面板 |
-| `dsh-embedded-browser` | —（当前 profile 未启用） | 未验证 | 未启用 | 历史登记；启用时需配置 `browserPath` 与 `lazyTools` |
+| `dsh-embedded-browser` | 0.3.0 | 运行时验证 | web、superagent | 历史登记；`browserPath` 与 `lazyTools` 按 profile `cordis.patch.yml` 配置 |
 | `ds-harness-remote` | 0.6.4（npm registry，无 `engines.dsh` 声明） | 运行时验证（0.2.1-rc.5 启动、`--dump-config` 均通过；上游自述基线 `0.2.2-rc.1`，保留 0.2.1-rc.5 载体） | **无 — 2026-11-12 停用（`web` 从未启用）** | **2026-11-12 登记「不再使用」并清理**：从 `plugtest` 卸载（`dsh plugin remove`，依赖/bundle/`node_modules` 三层已核对为空），删除 `~/.dsh/ds-harness-remote` 设备私钥与服务器凭据，账号侧设备吊销待用户在 Remote 客户端操作。停用理由：默认全开 `terminal`/`remoteTools`/`hostControl`/`codex`/`acp`，配对即等同交出 Host 全权，且私钥明文落盘受 `CodexSandboxUsers` 可读 ACL 影响；本机无远程访问刚需。历史：2026-11-10 首次安装并验证（侧栏「Remote」入口、Host 身份与 Noise 握手正常，账号未登录故未建立隧道） |
 
 ### Bundle 清单（web profile，按加载顺序）
@@ -286,32 +295,34 @@ dsh plugin --profile web add D:\src\dsh\dsh-plugin-session-id
 | 2 | `@deepseek-ai/dsh-web-app` | 宿主 0.2.1-rc.5 | Web UI、host webserver、client | 精确 |
 | 3 | `@deepseek-ai/dsh-subagent-claude-code` | 0.2.1-rc.5 | Claude Code 子代理 provider | 精确 |
 | 4 | `@deepseek-ai/dsh-subagent-codex` | 0.2.1-rc.5 | Codex 子代理 provider | 精确 |
-| 5 | `dsh-codex-cred-sync` | 1.0.0 @ `8f4586e` | DSH 凭据引用与 pi agent auth 同步 | 运行时 |
-| 6 | `dsh-chat-import` | 0.25.2 | 外部聊天记录导入与反向导出 | 运行时 |
-| 7 | `dsh-mermaid-smooth` | 0.1.0 | Mermaid 渲染增强 | 运行时 |
-| 8 | `@local/dsh-plugin-sidebar-visibility` | 0.0.9 @ `5834059` | 侧栏隐藏/折叠/排序/收藏/任务隐藏/选择器过滤/运行状态 | 运行时 |
+| 5 | `dsh-chat-import` | 0.25.2 | 外部聊天记录导入与反向导出 | 运行时 |
+| 6 | `@jiangdaoli/dsh-archived-sessions` | 0.4.4 @ `fffe92f` | 归档列表、查看器、删除 | peer 精确 |
+| 7 | `@local/dsh-plugin-sidebar-visibility` | 0.0.9 @ `5834059` | 侧栏隐藏/折叠/排序/收藏/任务隐藏/选择器过滤/运行状态 | 运行时 |
+| 8 | `@local/dsh-plugin-sidebar-panel-area` | 0.0.1（root 仓库跟踪） | 侧栏插件区折叠与高度调节 | 运行时 |
 | 9 | `dsh-notify-bell` | 0.12.0 | 语义通知音 | 运行时 |
-| 10 | `@jiangdaoli/dsh-archived-sessions` | 0.4.4 @ `fffe92f` | 归档列表、查看器、删除 | peer 精确 |
+| 10 | `dsh-mermaid-smooth` | 0.1.0 | Mermaid 渲染增强 | 运行时 |
 | 11 | `dsh-deepseek-keypool` | 3.8.3 @ `29c7309` | provider 分档故障转移与 key 轮换 | 运行时 |
 | 12 | `dsh-plugin-provider-badge` | 0.4.0 @ `2a69c5f` | 模型选择器 provider 徽标 | 运行时 |
-| 13 | `@local/dsh-ptc-multi-agent-mode` | bundle 0.3.0 | PTC 多代理预设与路由 | 运行时；声明 0.2.0-rc.2 |
-| 14 | `@local/dsh-preset-failover-tiers` | 0.1.0 @ `b373d1a` | provider failover 档位表 | 运行时 |
-| 15 | `@deepseek-ai/dsh-experimental-auto-review` | 宿主 0.2.1-rc.5 | 自动 review | 精确 |
-| 16 | `dsh-palette` | 0.2.1 | 命令面板 | 运行时 |
-| 17 | `dsh-recent-sessions` | 0.1.2 | 最近会话面板 | 运行时 |
-| 18 | `dshmarket` | 1.66.21 | 插件市场 | 运行时 |
-| 19 | `dsh-plugin-subagent-monitor` | 0.1.0 | 子代理/后台任务可见性 | 运行时 |
-| 20 | `dsh-plugin-subagent-director` | 0.6.0-beta.2 | 子代理 provider/model 调度 | 运行时 |
-| 21 | `dsh-config-pack` | 0.11.7 @ `6e4ac9d` | profile patch 层、agent 预设、provider 路由、备份/恢复 | peer 精确 |
+| 13 | `dsh-plugin-subagent-monitor` | 0.1.0（root 仓库跟踪） | 子代理/后台任务可见性 | 运行时 |
+| 14 | `@local/dsh-ptc-multi-agent-mode` | bundle 0.3.0 | PTC 多代理预设与路由 | 运行时；声明 0.2.0-rc.2 |
+| 15 | `dshmarket` | 1.66.21（tarball `b8948c1`） | 插件市场面板 | 运行时 |
+| 16 | `dsh-plugin-ptc-switches` | 0.2.0（root 仓库跟踪） | PTC 模式热切换 UI | 运行时 |
+| 17 | `dsh-palette` | 0.2.1 | 命令面板（⌘K） | 运行时 |
+| 18 | `dsh-recent-sessions` | 0.1.2（github:huangxp12） | 最近会话面板 | 运行时 |
+| 19 | `dsh-plugin-new-session` | 0.2.0（root 仓库跟踪） | 独立顶层会话创建 | 运行时 |
+| 20 | `dsh-embedded-browser` | 0.3.0 | 右侧栏内嵌浏览器 | 运行时（需 `browserPath`/`lazyTools` 配置） |
+| 21 | `dsh-ui-progress` | 0.1.2 | 会话进度看板：侧边栏三色角标 + 全部/进行中/已完成分栏 + 工作空间筛选 | 运行时 |
+| 22 | `@weibaohui/dsh-dashboard` | 0.2.1 | 使用量仪表盘：离线统计 token/费用/模型与工具榜 | 运行时 |
+| 23 | `dsh-file-finder` | 0.15.0 | 文件查找：按名/内容搜索，预览与编辑 | 运行时 |
 
 ### Profile 组合差异
 
 | Profile | Bundle 组合 | 说明 |
 |---|---|---|
-| `web` | 上表 21 个 bundle | 日常主 profile，默认启动 |
+| `web` | 上表 23 个 bundle | 日常主 profile，默认启动 |
 | `plugintest` | 与 web 同构 | 恢复/升级演练用副本 |
 | `packed` | 旧版测试组合（核心 0.2.0-rc.2 + config-pack `32159f3`） | 保留兼容/回归；当前 `--dump-config` 会跳过不兼容的旧 subagent/archived bundle |
-| `superagent` | web 副本 + `dsh-superagent` + `dsh-plugin-eye-care-bg`（共 23 个 bundle，`dsh-config-pack` 仍排最后） | 独立服务，`127.0.0.1:3082`；护眼底色只在本 profile 启用 |
+| `superagent` | web 同构（去掉 `dsh-file-finder`）+ `dsh-plugin-subagent-director` + `@deepseek-ai/dsh-experimental-auto-review` + `dsh-task-progress` + `dsh-task-supervisor` + `dsh-taskboard` + `dsh-superagent`（共 28 个 bundle） | 独立服务，`127.0.0.1:3082` |
 | `headless` | 最小组合 | 无第三方 UI/插件 |
 
 > 2026-11-10 实测：本机测试 profile 的目录名是 `plugtest`（上表 `plugintest` 为历史登记名）。按 `AGENTS.md` §4.7 安装闸门，第三方插件先在这里验证再决定是否进 `web`。
@@ -323,7 +334,7 @@ dsh plugin --profile web add D:\src\dsh\dsh-plugin-session-id
 ```powershell
 dsh --version                                      # 必须为 0.2.1-rc.5 或登记的新基线
 dsh --profile web --dump-config > $null            # exit 0；无 did not activate / patch entry not found
-dsh --profile superagent --dump-config > $null     # exit 0；含 eye-care-bg 行；superagent profile 同门槛
+dsh --profile superagent --dump-config > $null     # exit 0；superagent profile 同门槛
 dsh plugin --profile web list
 pwsh -NoProfile -File .\dsh-config-pack\scripts\dsh-backup.ps1 backup -AllProfiles -RehearseOnline
 
