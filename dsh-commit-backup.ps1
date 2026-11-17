@@ -51,7 +51,8 @@
   把未被 .gitignore 忽略的未跟踪文件一并提交（仍会过滤凭据与临时产物）。
 
 .PARAMETER IncludeFocusHub
-  把 D:\src\dsh\focus-hub（独立应用仓库，根仓库 .gitignore 已排除）纳入本次范围。
+  把 focus-hub（独立应用仓库）纳入本次范围。2026-11-17 起它位于工作区之外
+  （<工作区父目录>\focus-hub，例如 D:\src\focus-hub）；旧的内嵌位置 <根>\focus-hub 仍兼容。
 
 .PARAMETER IncludeSiblingRepos
   把工作区之外的兄弟检出（默认 <工作区父目录>\dsh-superagent）纳入本次范围。
@@ -226,6 +227,22 @@ function Get-RepoTargets {
 			Path = $d.FullName
 			Kind = $(if ($d.Name -eq 'focus-hub') { 'sibling' } else { 'submodule' })
 		})
+	}
+	# focus-hub：独立应用仓库，2026-11-17 起提升到工作区之外（<根>\..\focus-hub），
+	# 需 -IncludeFocusHub 显式纳入；旧的内嵌位置 <根>\focus-hub 仍兼容。
+	if ($IncludeFocusHub -and -not ($children | Where-Object { $_.Name -eq 'focus-hub' })) {
+		$focusCandidates = @(
+			(Join-Path (Split-Path $Root -Parent) 'focus-hub'),
+			(Join-Path $Root 'focus-hub')
+		)
+		foreach ($cand in $focusCandidates) {
+			$full = $null
+			try { $full = (Resolve-Path -LiteralPath $cand -ErrorAction Stop).Path } catch { $full = $null }
+			if ($null -eq $full) { continue }
+			if (-not (Test-Path -LiteralPath (Join-Path $full '.git'))) { continue }
+			$children.Add([pscustomobject]@{ Name = 'focus-hub'; Path = $full; Kind = 'sibling' })
+			break
+		}
 	}
 	if ($IncludeSiblingRepos) {
 		$candidates = New-Object System.Collections.Generic.List[string]

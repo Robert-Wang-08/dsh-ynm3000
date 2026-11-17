@@ -7,7 +7,9 @@ node_modules/
 # 模型评测产物（zip + 生成物），不属于插件/配置仓
 model-benchmark/
 
-# focus-hub 是独立应用仓库。2026-11-05 复核：已有 origin（github.com/Robert-Wang-08/focus-hub.git），
+# focus-hub 是独立应用仓库，2026-11-17 起已迁出到 D:\src\focus-hub（与工作区并行，不再位于根下）。
+# 保留下面这条排除规则：防止它再被克隆/搬回工作区，生成 .gitmodules 里没有条目的 gitlink。
+# 2026-11-05 复核：已有 origin（github.com/Robert-Wang-08/focus-hub.git），
 # 本地 main 领先 76 个提交、尚未注册为 submodule。未注册前直接提交只会变成 .gitmodules 里没有条目的
 # gitlink，克隆方拿到空目录。需要把它纳入「一键提交」时用 dsh-commit-backup.ps1 -IncludeFocusHub。
 focus-hub/
