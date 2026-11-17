@@ -157,8 +157,12 @@ def instance(config, item, now, reader):
             continue
         detail, detail_error = get(base + "/tickets/" + raw["id"])
         recap = report_from_detail(detail or {}, raw["id"], raw.get("updatedAt")) if not detail_error else {"text":"暂无可用摘要", "quality":"unavailable"}
+        # A review decision is about the ticket's pull request, so a notice can name it instead of "the delivery".
+        pr = raw.get("pr_number")
+        if not pr and not detail_error and isinstance(detail, dict):
+            pr = detail.get("pr_number")
         row = {"id": raw["id"], "title": safe_text(raw.get("title"),100), "stage": raw.get("stage", "unknown"), "action": raw.get("action"), "ended": end,
-               "sessionId": sid, "updatedAt": raw.get("updatedAt"), "recap": recap, "detailError": detail_error}
+               "pr": pr, "sessionId": sid, "updatedAt": raw.get("updatedAt"), "recap": recap, "detailError": detail_error}
         # Effort is final state, so it is collected only after the authoritative end event.
         row["effort"]=effort_from_detail(detail or {}, row, now) if end and not detail_error else None
         if isinstance(row["effort"], dict) and row["effort"].get("quality")=="observed":

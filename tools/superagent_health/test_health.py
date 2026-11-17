@@ -96,20 +96,51 @@ class EvidenceTests(unittest.TestCase):
         self.assertIn("- 今日完成工单：1",text)
         self.assertIn("- 工单待人工：0",text)
 
-    def test_attention_notice_is_a_short_list_not_the_whole_report(self):
+    def test_attention_notice_states_the_decision_and_the_action(self):
         snap=sample()
-        snap["instances"][0]["tickets"]=[{"id":"t1","title":"语义本体工单","stage":"person","recap":{"text":"等待决定","quality":"worker_report_not_independently_verified"}}]
-        issue={"id":"test:t1:attention","issueId":"test:t1:attention","revision":"r1","instanceId":"test","ticketId":"t1","question":"是否继续？","reason":"answer","deadline":None}
+        snap["instances"][0]["tickets"]=[{"id":"t1","title":"语义本体工单","stage":"person","pr":12,
+            "updatedAt":"2026-11-12T13:30:00+08:00",
+            "recap":{"text":"PR #12 已提交并推送（+33/-26），等你合并","quality":"worker_report_not_independently_verified"}}]
+        issue={"id":"test:t1:review","issueId":"test:t1:review","revision":"r1","instanceId":"test","ticketId":"t1","question":"语义本体工单","reason":"review","deadline":None}
         text=render_attention(snap,"待人工事项",issue)
         self.assertTrue(text.startswith("# Superagent · 待人工事项"))
         self.assertIn("- 工单：**t1** 语义本体工单 · 待人工",text)
-        self.assertIn("- 问题：是否继续？",text)
-        self.assertIn("- 原因：answer",text)
+        self.assertIn("- 待决问题：是否验收这单的交付（PR #12）",text)
+        self.assertIn("- 需要你做：复核 PR #12",text)
+        self.assertIn("- 最后进展（worker 报告）：PR #12 已提交并推送",text)
+        self.assertIn("已等待 30m",text)
+        self.assertNotIn("原因：review",text)
+        self.assertNotIn("- 问题：语义本体工单",text)
         self.assertIn("完整待人工事项报告",text)
         self.assertIn("latest-attention.md",text)
         self.assertIn("每 4 小时整点（09/13/17）",text)
         self.assertNotIn("## 今日用量",text)
         self.assertEqual(text,report_text(snap,"待人工事项",issue))
+
+    def test_attention_notice_explains_each_waiting_stage(self):
+        snap=sample()
+        snap["instances"][0]["tickets"]=[{"id":"t1","title":"语义本体工单","stage":"person"}]
+        cases={"answer":("是否继续？","在提出问题的对话"),"delivery":("语义本体工单","投递会自动重试"),
+               "blocked":("语义本体工单","解除阻塞"),"failed":("语义本体工单","等你决定是否重试")}
+        for reason,(question,needle) in cases.items():
+            issue={"id":"test:t1:"+reason,"instanceId":"test","ticketId":"t1","question":question,"reason":reason,"deadline":None}
+            text=render_attention(snap,"待人工事项",issue)
+            self.assertIn("- 待决问题：",text)
+            self.assertIn("- 需要你做：",text)
+            self.assertIn(needle,text)
+            self.assertNotIn("原因："+reason,text)
+
+    def test_health_report_human_section_names_decision_and_action(self):
+        snap=sample()
+        snap["instances"][0]["tickets"]=[{"id":"t1","title":"语义本体工单","stage":"person","updatedAt":"2026-11-12T13:30:00+08:00",
+            "recap":{"text":"等你决定","quality":"worker_report_not_independently_verified"}}]
+        snap["instances"][0]["humanItems"]=[{"issueId":"test:t1:answer","revision":"r","ticketId":"t1","reason":"answer","question":"是否继续？","updatedAt":"2026-11-12T13:30:00+08:00"}]
+        text=render(snap)
+        self.assertIn("**需要管理人**",text)
+        self.assertIn("  - 待决问题：是否继续？",text)
+        self.assertIn("  - 需要你做：",text)
+        self.assertIn("已等待 30m",text)
+        self.assertNotIn("原因：answer",text)
 
     def test_health_report_is_not_replaced_by_attention_renderer(self):
         self.assertEqual(render(sample()),report_text(sample(),"健康报告",None))
@@ -560,7 +591,7 @@ class HumanItemIdentityTests(unittest.TestCase):
             if url.endswith("/state"): return state,None
             if "/tickets?state=open" in url: return {"items":items,"total":1,"next_offset":None},None
             if "/tickets?state=ended" in url: return {"items":[],"total":0,"next_offset":None},None
-            if url.endswith("/tickets/t1"): return {"attention":{"id":"attention-1","question":"是否继续？"}},None
+            if url.endswith("/tickets/t1"): return {"attention":{"id":"attention-1","question":"是否继续？"},"pr_number":12},None
             return None,"http_404"
         with patch("collect.get",side_effect=fake_get):
             first=instance({},{"id":"test","url":"http://127.0.0.1:3082"},NOW,Reader())
@@ -570,6 +601,7 @@ class HumanItemIdentityTests(unittest.TestCase):
         self.assertEqual(before["revision"],after["revision"])
         self.assertEqual(before["updatedAt"],"2026-11-12T06:00:00Z")
         self.assertEqual(after["updatedAt"],"2026-11-12T06:03:00Z")
+        self.assertEqual(first["tickets"][0]["pr"],12)
 
 
 class TaskEffortTests(unittest.TestCase):
