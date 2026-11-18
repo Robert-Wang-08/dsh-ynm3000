@@ -1,6 +1,8 @@
 """Single-tick/daemon health reporting service. Dry-run is the default command."""
 import argparse
+import hashlib
 import json
+import shutil
 import sqlite3
 import os
 import sys
@@ -39,6 +41,106 @@ def process_lock(directory):
     finally:
         lock.close()
 
+
+STATE_COPY_SKIP=("health.sqlite","health.sqlite-wal","health.sqlite-shm","reporter.lock")
+
+def _sha256(file):
+    return hashlib.sha256(Path(file).read_bytes()).hexdigest()
+
+def _sqlite_summary(database):
+    connection=sqlite3.connect(str(database),timeout=5)
+    try:
+        integrity=str(connection.execute("PRAGMA integrity_check").fetchone()[0])
+        try:
+            outbox=dict(connection.execute("SELECT state,count(*) FROM outbox GROUP BY state").fetchall())
+        except sqlite3.DatabaseError:
+            outbox={}
+        return integrity,outbox
+    finally:
+        connection.close()
+
+@contextmanager
+def _acquire_lock(directory,wait=60.0):
+    """Wait for a running tick to finish instead of failing the first attempt."""
+    deadline=time.monotonic()+max(0.0,wait)
+    while True:
+        try:
+            with process_lock(directory):
+                yield
+                return
+        except RuntimeError:
+            if time.monotonic()>=deadline:
+                raise
+            time.sleep(0.5)
+
+def migrate_state(config,config_path,target,write_config=False,keep_old=False,wait=60.0):
+    """Move the runtime state to another folder, keeping dedupe and delivery evidence.
+
+    A live SQLite database under a sync client must not be copied file-by-file: the SQLite
+    backup API takes a consistent snapshot including any committed WAL content, and the nested
+    reporter lock keeps a scheduled tick from writing while the copy is verified.
+    """
+    source=Path(config["state_dir"]).expanduser().resolve()
+    if not str(target or "").strip():
+        raise ValueError("state_target_required")
+    target=Path(os.path.expandvars(str(target))).expanduser().resolve()
+    if source==target:
+        raise ValueError("state_target_same_as_source")
+    if source in target.parents or target in source.parents:
+        raise ValueError("state_target_nested")
+    if not source.is_dir():
+        raise ValueError("state_source_missing")
+    if (target/"health.sqlite").exists():
+        raise ValueError("state_target_already_has_state")
+    target.mkdir(parents=True,exist_ok=True)
+    with _acquire_lock(source,wait):
+        with _acquire_lock(target,wait):
+            copied=0
+            if (source/"health.sqlite").is_file():
+                origin=sqlite3.connect(str(source/"health.sqlite"))
+                destination=sqlite3.connect(str(target/"health.sqlite"))
+                try:
+                    origin.backup(destination)
+                finally:
+                    destination.close()
+                    origin.close()
+                source_integrity,source_outbox=_sqlite_summary(source/"health.sqlite")
+                target_integrity,target_outbox=_sqlite_summary(target/"health.sqlite")
+                if source_integrity!="ok":
+                    raise RuntimeError("state_source_integrity_failed")
+                if target_integrity!="ok":
+                    raise RuntimeError("state_copy_integrity_failed")
+                if source_outbox!=target_outbox:
+                    raise RuntimeError("state_copy_outbox_mismatch")
+            else:
+                Store(target).close()
+            for item in sorted(source.iterdir()):
+                if item.name in STATE_COPY_SKIP or item.name.endswith(".tmp"):
+                    continue
+                if not item.is_file():
+                    continue
+                destination_file=target/item.name
+                shutil.copy2(item,destination_file)
+                if _sha256(item)!=_sha256(destination_file):
+                    raise RuntimeError("state_copy_checksum_mismatch:"+item.name)
+                copied+=1
+            result={"source":str(source),"target":str(target),"filesCopied":copied,
+                    "databaseCopied":(source/"health.sqlite").is_file(),
+                    "outbox":_sqlite_summary(target/"health.sqlite")[1],
+                    "configUpdated":False,"oldStateMovedTo":None}
+            if write_config:
+                raw=json.loads(Path(config_path).read_text(encoding="utf-8-sig"))
+                raw["state_dir"]=str(target)
+                atomic_text(config_path,json.dumps(raw,ensure_ascii=False,indent=2)+chr(10))
+                result["configUpdated"]=True
+    # The lock file lives inside the source folder, so the rename happens after it is closed.
+    if write_config and not keep_old:
+        moved=source.with_name(source.name+".migrated-"+datetime.now(CST).strftime("%Y%m%d-%H%M%S"))
+        if moved.exists():
+            raise RuntimeError("state_backup_target_exists")
+        source.rename(moved)
+        result["oldStateMovedTo"]=str(moved)
+    return result
 
 def quiet(now,config):
     start,end=config.get("quiet_hours",[22,8])
@@ -107,7 +209,7 @@ def enqueue_report(store,config,snapshot,key,kind,urgent=False,issue=None,health
     fingerprint=binding_id(config,resolved)
     now=datetime.fromisoformat(snapshot["collectedAt"])
     group=digest([fingerprint,key,config["instances"]])
-    parts=chunks(report_text(snapshot,kind,issue,health))
+    parts=chunks(report_text(snapshot,kind,issue,health,state_dir=config.get("state_dir")))
     available=now.timestamp() if urgent else max(next_open(now,config),snapshot.get("notBefore",0))
     entries=[]
     for index,text in enumerate(parts):
@@ -314,13 +416,25 @@ def tick(config,allow_send=False):
 
 def main():
     parser=argparse.ArgumentParser()
-    parser.add_argument("command",choices=["dry-run","tick","run","status"])
+    parser.add_argument("command",choices=["dry-run","tick","run","status","migrate-state"])
     parser.add_argument("--config",required=True)
     parser.add_argument("--allow-send",action="store_true")
+    parser.add_argument("--target",help="new state folder for migrate-state")
+    parser.add_argument("--write-config",action="store_true",help="point the device config at --target")
+    parser.add_argument("--keep-old",action="store_true",help="leave the previous state folder in place")
     args=parser.parse_args()
     if args.command=="dry-run" and args.allow_send:
         parser.error("dry-run cannot enable sending")
     config=load_config(args.config)
+    if args.command=="migrate-state":
+        if args.allow_send:
+            parser.error("migrate-state cannot enable sending")
+        if not args.target:
+            parser.error("migrate-state requires --target")
+        print(json.dumps(migrate_state(config,args.config,args.target,
+                                       write_config=args.write_config,keep_old=args.keep_old),
+                         ensure_ascii=False))
+        return
     if args.command=="status":
         if args.allow_send:
             parser.error("status cannot enable sending")

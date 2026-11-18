@@ -18,10 +18,10 @@
 | 服务代码 | 本仓库 `tools/superagent_health/` | 是，更新仓库即得 |
 | 设备配置 | `%USERPROFILE%\.dsh\device\superagent-health\config.json` | 否 |
 | 收件人与 CLI 指针 | 同目录 `binding.env.json`（仅发送需要） | 否 |
-| 运行状态 | `%USERPROFILE%\.dsh\state\superagent-health\`（`health.sqlite`、`latest.md`、`heartbeat.json`） | 否 |
+| 运行状态 | 设备配置的 `state_dir`；默认 `%USERPROFILE%\.dsh\state\superagent-health\`（`health.sqlite`、`latest.md`、`heartbeat.json`），可指向同步盘的 `个人数据\superagent-health\<设备名>` | 按配置：默认否；指向同步盘时有云端副本，但仍只归该设备使用 |
 | 计划任务 | `DSH-Superagent-Health` | 否 |
 
-不要把另一台设备的绝对路径、`binding.env.json`、`health.sqlite` 或 lark-cli 登录态拷过来：绑定哈希和去重水位都对不上。
+不要把另一台设备的绝对路径、`binding.env.json`、`health.sqlite` 或 lark-cli 登录态拷过来：绑定哈希和去重水位都对不上。两台设备也不得共用同一 `state_dir`（即使指向同一同步盘）；要换目录用 `migrate-state`，不要手工搬库。
 
 ## 前提
 
@@ -97,6 +97,8 @@ Get-Content "$env:USERPROFILE\.dsh\state\superagent-health\heartbeat.json" -Raw
 
 `latest.md` 应包含本机实例和采集时间；`heartbeat.json` 的 `mode` 为 `dry-run`。如果接口暂时不可达，报告会明确显示不可采集，但这一步仍能证明采集链路已经跑通。
 
+> 上面的检查命令写的是默认状态目录；配置里改过 `state_dir`（例如迁到同步盘）就换成该目录，下文同类命令同理。
+
 > 手动直接跑 `service.py` 时，`binding.env.json` 不会自动加载；如果 zstd 不在 `PATH`，先设 `$env:PTC_ZSTD`。走 `run.ps1` 或计划任务时才会读取绑定文件。
 
 ## 第三步：安装采集任务（先不发送）
@@ -108,6 +110,14 @@ pwsh tools/superagent_health/manage.ps1 status
 ```
 
 `install` 注册计划任务 `DSH-Superagent-Health`，每分钟一次，经隐藏窗口启动，`IgnoreNew` 与进程文件锁共同防重叠；同名任务已存在时拒绝替换。`status` 看 `State` 和 `LastTaskResult`。
+
+要把运行状态放在同步盘（本机目录重建后仍保留去重水位和投递证据），用迁移命令，不要手工复制 SQLite 文件：
+
+~~~powershell
+pwsh tools/superagent_health/manage.ps1 migrate-state -TargetStateDir "D:\nutstore\Skill+Tool\skillhub\个人数据\superagent-health\AERO17"
+~~~
+
+它先停采集任务，用 SQLite backup API 取一致快照，复制并校验其余快照文件与 outbox 计数，改写设备配置 `state_dir`，旧目录改名留档，最后恢复任务；失败时旧目录、配置与任务状态不动。目录名带本设备名，另一台设备用各自的子目录。`state_dir` 仍是设备层配置，不进 Git。
 
 约两分钟后验证：
 
@@ -163,6 +173,7 @@ pwsh tools/superagent_health/manage.ps1 start
 - [ ] 启用发送前，管理人已确认收件人、bot 身份和脱敏内容，并实际收到一条样报。
 - [ ] 次日 09:00 后能收到前一自然日闭账（或 outbox 明确显示待投递）。
 - [ ] `config.json`、`binding.env.json` 和 Git 变更里都没有凭据。
+- [ ] 状态目录指到同步盘时带本设备名子目录，没有第二台设备共用同一 `state_dir`；`status` 读到的 outbox 计数在迁移前后一致。
 
 ## 停用与回滚
 

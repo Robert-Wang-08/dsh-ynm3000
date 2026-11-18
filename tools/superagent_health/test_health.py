@@ -8,14 +8,14 @@ import unittest
 from datetime import datetime, timedelta
 from pathlib import Path
 from unittest.mock import patch
-from common import CST, instant, safe_text, digest
+from common import CST, instant, safe_text, digest, load_config
 from events import fold_events
 from collect import instance, report_from_detail, tickets, effort_from_detail
 from delivery import send, binding_id, DeliveryError
 from deploy import deployment_state
 from render import chunks, render, render_attention, report_text
 from store import Store
-from service import quiet, next_open, plan, dispatch, enqueue_report, settle_seconds, tick
+from service import quiet, next_open, plan, dispatch, enqueue_report, settle_seconds, tick, migrate_state
 
 NOW=datetime(2026,11,12,14,0,tzinfo=CST)
 def event(kind,at,seq,data=None):
@@ -971,6 +971,84 @@ class DeploymentGuardTests(unittest.TestCase):
             dirty=deployment_state(Path(directory))
             self.assertIn("dirty",dirty["reasons"])
             self.assertEqual(dirty["dirty"],["note.txt"])
+
+class StateHintTests(unittest.TestCase):
+    def issue(self):
+        ticket={"id":"t1","title":"语义本体工单","stage":"person"}
+        snap=sample()
+        snap["instances"][0]["tickets"]=[ticket]
+        return snap,{"id":"test:t1:review","instanceId":"test","ticketId":"t1","question":"语义本体工单","reason":"review","deadline":None}
+
+    def test_attention_hint_names_the_configured_state_folder(self):
+        snap,issue=self.issue()
+        text=render_attention(snap,"待人工事项",issue,state_dir=r"D:\cloud\health\AERO17")
+        self.assertIn(r"D:\cloud\health\AERO17\latest-attention.md",text)
+        self.assertNotIn("%USERPROFILE%",text)
+
+    def test_default_hint_keeps_the_profile_placeholder(self):
+        snap,issue=self.issue()
+        text=render_attention(snap,"待人工事项",issue)
+        self.assertIn("%USERPROFILE%\\.dsh\\state\\superagent-health\\latest-attention.md",text)
+
+    def test_incident_hint_follows_the_configured_state_folder(self):
+        text=report_text(sample(),"异常健康报告",health={"instanceId":"test"},state_dir=r"D:\cloud\health\AERO17")
+        self.assertIn(r"D:\cloud\health\AERO17\latest.md",text)
+
+
+class StateMigrationTests(unittest.TestCase):
+    def setUp(self):
+        self.temp=tempfile.TemporaryDirectory()
+        self.root=Path(self.temp.name)
+        self.source=self.root/"state"
+        self.source.mkdir()
+        self.target=self.root/"cloud"/"health"
+        self.config_file=self.root/"config.json"
+        self.config_file.write_text(json.dumps({"instances":[{"id":"test","url":"http://127.0.0.1:9"}],
+                                                "state_dir":str(self.source)}),encoding="utf-8")
+
+    def tearDown(self):
+        self.temp.cleanup()
+
+    def seed(self):
+        store=Store(self.source)
+        store.enqueue_group([("k-1",{"text":"x"})],0)
+        store.close()
+        (self.source/"latest.md").write_text("报告",encoding="utf-8")
+        (self.source/"heartbeat.json").write_text("{}",encoding="utf-8")
+        (self.source/"reporter.lock").write_bytes(b"0")
+
+    def test_migration_keeps_outbox_and_rewrites_config(self):
+        self.seed()
+        result=migrate_state(load_config(self.config_file),self.config_file,str(self.target),write_config=True)
+        self.assertEqual(result["outbox"],{"pending":1})
+        self.assertTrue((self.target/"health.sqlite").is_file())
+        self.assertEqual((self.target/"latest.md").read_text(encoding="utf-8"),"报告")
+        self.assertEqual(json.loads(self.config_file.read_text(encoding="utf-8"))["state_dir"],str(self.target))
+        self.assertFalse(self.source.exists())
+        moved=Path(result["oldStateMovedTo"])
+        self.assertTrue(moved.is_dir())
+        self.assertTrue((moved/"health.sqlite").is_file())
+
+    def test_migration_without_config_rewrite_keeps_the_old_folder(self):
+        self.seed()
+        result=migrate_state(load_config(self.config_file),self.config_file,str(self.target))
+        self.assertFalse(result["configUpdated"])
+        self.assertIsNone(result["oldStateMovedTo"])
+        self.assertTrue(self.source.is_dir())
+        self.assertEqual(json.loads(self.config_file.read_text(encoding="utf-8"))["state_dir"],str(self.source))
+
+    def test_migration_refuses_a_nested_same_or_occupied_target(self):
+        self.seed()
+        config=load_config(self.config_file)
+        with self.assertRaises(ValueError):
+            migrate_state(config,self.config_file,str(self.source/"inner"))
+        with self.assertRaises(ValueError):
+            migrate_state(config,self.config_file,str(self.source))
+        occupied=self.root/"occupied"
+        occupied.mkdir()
+        (occupied/"health.sqlite").write_text("x",encoding="utf-8")
+        with self.assertRaises(ValueError):
+            migrate_state(config,self.config_file,str(occupied))
 
 if __name__=="__main__":
     unittest.main(verbosity=2)

@@ -1,10 +1,12 @@
 [CmdletBinding()]
 param(
-  [ValidateSet('init','install','status','start','stop','uninstall')][string]$Action = 'status',
+  [ValidateSet('init','install','status','start','stop','uninstall','migrate-state')][string]$Action = 'status',
   [string]$Config = (Join-Path $env:USERPROFILE '.dsh/device/superagent-health/config.json'),
   [string]$TaskName = 'DSH-Superagent-Health',
   [switch]$AllowSend,
-  [string]$Python = ''
+  [string]$Python = '',
+  [string]$TargetStateDir = '',
+  [switch]$KeepOldState
 )
 $ErrorActionPreference = 'Stop'
 function New-HiddenAction([string]$Executable,[string]$Arguments,[string]$Launcher,[string]$WorkingDirectory){
@@ -20,6 +22,37 @@ if ($Action -eq 'init') {
   New-Item -ItemType Directory -Path (Split-Path -Parent $Config) -Force | Out-Null
   Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'config.example.json') -Destination $Config
   Write-Output 'Created device config; sending disabled.'
+  exit 0
+}
+if ($Action -eq 'migrate-state') {
+  if (-not $TargetStateDir) { throw 'migrate-state requires -TargetStateDir (an absolute folder).' }
+  if (-not (Test-Path -LiteralPath $Config)) { throw 'Run init first.' }
+  # The scheduled task writes every minute: stop it and wait for the running tick to exit
+  # before the service copies the database, then restore the previous enabled state.
+  $task = Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
+  $taskWasEnabled = $false
+  if ($task) {
+    $taskWasEnabled = $task.State -ne 'Disabled'
+    if ($task.State -eq 'Running') { Stop-ScheduledTask -TaskName $TaskName }
+    Disable-ScheduledTask -TaskName $TaskName | Out-Null
+  }
+  if (-not $Python) { $Python = (Get-Command python -ErrorAction Stop).Source }
+  $service = Join-Path $PSScriptRoot 'service.py'
+  $arguments = @($service, 'migrate-state', '--config', $Config, '--target', $TargetStateDir, '--write-config')
+  if ($KeepOldState) { $arguments += '--keep-old' }
+  & $Python @arguments
+  if ($LASTEXITCODE -ne 0) {
+    if ($task -and $taskWasEnabled) {
+      Enable-ScheduledTask -TaskName $TaskName | Out-Null
+      Start-ScheduledTask -TaskName $TaskName
+    }
+    throw ('State migration failed (exit ' + $LASTEXITCODE + '); the previous state folder and config are unchanged and the task was restored.')
+  }
+  if ($task -and $taskWasEnabled) {
+    Enable-ScheduledTask -TaskName $TaskName | Out-Null
+    Start-ScheduledTask -TaskName $TaskName
+  }
+  Write-Output ('State moved to ' + $TargetStateDir)
   exit 0
 }
 if ($Action -eq 'install') {

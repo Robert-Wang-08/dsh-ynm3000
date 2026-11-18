@@ -5,6 +5,7 @@ Markdown. The delivery transport converts Markdown into a Feishu rich-text post
 (`tag: md`), so headings, bullet lists and blank lines reach the reader as real
 formatting instead of one dense wall of text.
 """
+from pathlib import Path
 from common import CST, instant, safe_text
 
 LABEL={"reachable":"接口可达","online_degraded":"在线但降级","unknown":"状态未知","working":"执行中","idle":"空闲未结束","person":"待人工","ended":"已结束"}
@@ -12,9 +13,30 @@ LABEL={"reachable":"接口可达","online_degraded":"在线但降级","unknown":
 OUTCOME={"completed":"已完成","merged":"已完成","stopped":"已停止","dropped":"已结束未完成","closed":"已结束未完成"}
 EFFORT_INTRO="运行时长为建单到结束（含等待人工输入）；输入轮次为去重后的触发输入，交手为派给 worker 的次数。"
 EFFORT_TOKEN_INTRO="token 为工单 worker 会话全时用量，不含主控/子代理/外部 ACP；无 usage 记未知，不填 0。"
+# Default state folder, shown as a profile placeholder so the report does not carry a literal user path.
+DEFAULT_STATE_DIR="%USERPROFILE%\\.dsh\\state\\superagent-health"
+
+def state_display(state_dir=None):
+    """The state folder as it appears in a report hint.
+
+    A device may move its state folder to a synced disk so the outbox and dedupe
+    watermarks survive a rebuild; a hint must then name the folder actually in use
+    instead of the default one, or it points at a path that no longer exists.
+    """
+    raw=str(state_dir or "").strip()
+    if not raw:
+        return DEFAULT_STATE_DIR
+    home=str(Path.home()).rstrip("\\/")
+    text=raw.rstrip("\\/")
+    if home and text.lower().startswith(home.lower()):
+        text="%USERPROFILE%"+text[len(home):]
+    return text
+
 # One-line pointer back to the full report, so a focused attention notice is not a dead end.
 # The attention snapshot is the same full snapshot as the health report, kept under the attention title.
-REPORT_HINT="完整待人工事项报告：本机快照 `%USERPROFILE%\\.dsh\\state\\superagent-health\\latest-attention.md`；飞书全量报告见每 4 小时整点（09/13/17）与 21:05 的「健康报告」（同内容）。"
+def REPORT_HINT(state_dir=None):
+    return ("完整待人工事项报告：本机快照 `"+state_display(state_dir)
+            +"\\latest-attention.md`；飞书全量报告见每 4 小时整点（09/13/17）与 21:05 的「健康报告」（同内容）。")
 # What an operator does about a failed collection: the code alone does not say whether the host or the plugin is at fault.
 ERROR_HINT={"http_404":"该实例没有挂载 orchestrator 路由（插件未加载或正在重载），可用 /orchestrator/api/state 手工复核",
             "auth_401":"接口要求鉴权或令牌无效","auth_403":"接口拒绝该身份",
@@ -24,7 +46,8 @@ HEALTH_CODE={"pollFailures":"轮询连续失败","setupPending":"等待部署检
              "feishuCliUnset":"飞书 bot CLI 未配置","feishuBotMissing":"等待飞书 bot"}
 # A focused incident message must not become a second full report: it only names the failure or the recovery.
 INCIDENT_BOUNDARY="本消息只报异常/恢复，不重复会话、工单与任务投入；完整报告见 09/13/17 整点及 21:05 的「健康报告」。"
-INCIDENT_HINT="本机完整快照 `%USERPROFILE%\\.dsh\\state\\superagent-health\\latest.md`。"
+def INCIDENT_HINT(state_dir=None):
+    return "本机完整快照 `"+state_display(state_dir)+"\\latest.md`。"
 
 def model_line(event):
     response=event.get("lastResponse")
@@ -245,7 +268,7 @@ def render(snapshot,kind="健康报告"):
               "- 本机采集只能说明接口可达，不保证调度循环及整机离线告警。"]
     return chr(10).join(lines)
 
-def render_attention(snapshot,kind,issue):
+def render_attention(snapshot,kind,issue,state_dir=None):
     """One human decision, as a short scannable list instead of the whole report."""
     instance=next((i for i in snapshot["instances"] if i.get("id")==issue.get("instanceId")),None)
     ticket=None
@@ -270,7 +293,7 @@ def render_attention(snapshot,kind,issue):
     if wait:
         lines.append("- "+wait)
     lines.append("- 事项："+str(issue.get("id") or issue.get("issueId") or "")+"；期限："+str(issue.get("deadline") or "未设置"))
-    lines += ["", "请回原工单处理；通知不等于授权。", "", REPORT_HINT]
+    lines += ["", "请回原工单处理；通知不等于授权。", "", REPORT_HINT(state_dir)]
     if instance is not None:
         others=[i for i in instance.get("humanItems",[]) if i.get("issueId")!=issue.get("id")]
         if others:
@@ -283,7 +306,7 @@ def render_attention(snapshot,kind,issue):
             lines += ["", "**注意**：本次状态采集异常，工单与人工待办数量可能不完整。"]
     return chr(10).join(lines)
 
-def render_health_notice(snapshot,kind,health):
+def render_health_notice(snapshot,kind,health,state_dir=None):
     """One incident or recovery, without the full session, ticket and effort inventory.
 
     `health` carries the incident instance and, for a recovery, the abnormal condition that
@@ -327,15 +350,15 @@ def render_health_notice(snapshot,kind,health):
             if (health or {}).get("successSamples") is not None:
                 causes.append("连续 "+str(health["successSamples"])+" 次采集成功")
             lines += ["", "**原因说明**："+("；".join(causes) if causes else "采集恢复正常")+"。"]
-    lines += ["", "**边界**："+INCIDENT_BOUNDARY, "", INCIDENT_HINT]
+    lines += ["", "**边界**："+INCIDENT_BOUNDARY, "", INCIDENT_HINT(state_dir)]
     return chr(10).join(lines)
 
-def report_text(snapshot,kind="健康报告",issue=None,health=None):
+def report_text(snapshot,kind="健康报告",issue=None,health=None,state_dir=None):
     """Pick the focused notice renderer for human-attention and incident messages."""
     if health is not None and kind in ("异常健康报告","恢复报告"):
-        return render_health_notice(snapshot,kind,health)
+        return render_health_notice(snapshot,kind,health,state_dir=state_dir)
     if isinstance(issue,dict) and kind.startswith("待人工"):
-        return render_attention(snapshot,kind,issue)
+        return render_attention(snapshot,kind,issue,state_dir=state_dir)
     return render(snapshot,kind)
 
 def chunks(text,limit=3500):
