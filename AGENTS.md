@@ -130,3 +130,25 @@
 3. **验收**：`dsh --version`、`dsh --profile <p> --dump-config`、`dsh plugin --profile <p> list`、`dsh-backup.ps1 backup -AllProfiles -RehearseOnline`；登记内容必须与实际安装和最新 bundle 一致。
 4. **基线变更**：DSH 宿主升级（如 `0.2.1-rc.5` → 新版本）时，必须整表复核兼容性并更新登记基线日期。
 
+## 11. 飞书 Bot 互调 @ 格式（2026-11-18）
+
+两个 Bot 在飞书里互相调用时，必须用 `post` 富文本 + 结构化 `at` 元素；在 `text` 里写 `@对方名字` 只是纯文本，**不会触发对方的 @ 事件**，等于没调用。
+
+```json
+{
+  "zh_cn": {
+    "content": [
+      [
+        {"tag": "at", "user_id": "ou_对方Bot的open_id"},
+        {"tag": "text", "text": " 请处理这个任务"}
+      ]
+    ]
+  }
+}
+```
+
+1. `msg_type` 必须是 `post`；`at` 用 `{"tag":"at","user_id":"ou_…"}`，`user_id` 填对方 Bot 的 open_id（`ou_` 开头），不是名字；`user_name` 仅用于展示，可省略。
+2. open_id 是**应用维度**的：必须用「自己应用视角」的值，从自己收到的消息 `mentions` / `sender.open_bot_id` 里取；对端自报的 open_id 只在它自己的应用里有效，直接拿来 at 会 `@` 错人。
+3. 发送方式不同，外层包裹不同：应用 Bot 走 `im/v1/messages`（lark-cli）时 `content` 直接是上面的 `{"zh_cn": …}`；只有自定义机器人 webhook 才需要外层 `{"msg_type":"post","content":{"post":{…}}}`。
+4. 本机已知的对方 Bot open_id 等设备相关值写在各自本机 AGENTS.md（`~/.dsh/AGENTS.md` / `~/.agents/AGENTS.md`），不进 Git（见第 6、8 节）。
+
