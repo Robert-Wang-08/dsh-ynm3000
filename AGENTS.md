@@ -23,6 +23,7 @@
 | `dsh-plugin-session-id` | 会话头部「会话 ID」按钮 UI 插件 | **未在 web profile 依赖中——按需 `dsh plugin add`，见 README** |
 | `dsh-subagent-acp-resilient` | 子代理插件 | `link:` 已登记 |
 | `dsh-plugin-new-session` | 会话内创建独立顶层会话的工具插件（配套 skill `new-session`） | `link:` 已登记 |
+| `dsh-plugin-focus-task-checkpoint` | Focus Hub 检查点钩子：`turn/end` 提交动作清单差异（配套 SkillHub skill `focus-task`，提交脚本由该 skill 的 `scripts/submit.mjs` 提供） | `link:` 指向本仓库目录（2026-11-19 从 SkillHub store 的 `focus-task/dsh` 迁入） |
 | `dsh-permission-compat` | 插件 | **未在 web profile 依赖中——改动前先核查是否需要登记/清理** |
 | `dsh-wechat-hitl` | 微信人工确认回环：DSH 侧插件 + OpenClaw 网关插件 + CLI + 单测（2026-10-28 从 logseq 库 `70-WorkSpace/wechat-hitl-20261026` 迁入，旧路径保留 junction） | 以目录形式装入 `profiles/{web,headless}/node_modules/dsh-wechat-hitl`，`cordis.patch.yml` 里 `- insert: wechat-hitl` 挂载；未走 `dsh plugin add` |
 | `focus-hub` | 独立应用（对应 profile `focushub-dev`）；**2026-11-17 起位于工作区之外** `D:\src\focus-hub`，与 `D:\src\dsh` 并行 | 非 DSH 插件；profile 以 `link:D:/src/focus-hub` 指向，收口备份需 `-IncludeFocusHub` |

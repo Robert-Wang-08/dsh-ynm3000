@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Focus Task checkpoint",
+    "description": "Submits an agent-claimed Focus Hub checkpoint when a turn ends and the todo list changed."
+  }
+}

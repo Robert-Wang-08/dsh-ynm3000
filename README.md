@@ -27,7 +27,7 @@ git clone --recurse-submodules https://github.com/Robert-Wang-08/dsh-ynm3000.git
 
 `dsh-wechat-hitl` 不走 `link:`：它以**目录副本**装进 `profiles/{web,headless}/node_modules/dsh-wechat-hitl`，再由该 profile 的 `cordis.patch.yml` 里 `- insert: wechat-hitl` 挂载（片段由 `dsh-wechat-hitl/tools/switch-hitl.mjs` 管理，路径跟随 `DSH_HOME`）。因此改代码后要**重新拷一次**到 profile，不像 `link:` 插件那样 `git pull` 即生效。装机与验收步骤见 [docs/bootstrap/PROMPT-新设备装机-引导.md](docs/bootstrap/PROMPT-新设备装机-引导.md) 第 5 步。
 
-下面五份还没有独立远程仓库，源码直接放在本仓库里：
+下面这些还没有独立远程仓库，源码直接放在本仓库里：
 
 - `dsh-plugin-new-session`
 - `dsh-plugin-ptc-switches`
@@ -37,6 +37,7 @@ git clone --recurse-submodules https://github.com/Robert-Wang-08/dsh-ynm3000.git
 - `dsh-plugin-sidebar-panel-area`
 - `dsh-plugin-superagent-appearance`
 - `dsh-plugin-eye-care-bg`
+- `dsh-plugin-focus-task-checkpoint`（配套 SkillHub skill `focus-task`；插件本体在本仓库，skill 本体在 SkillHub store）
 
 `dsh-plugin-subagent-monitor`、`dsh-subagent-acp-resilient` 已有独立远程仓库（`Robert-Wang-08/dsh-plugin-subagent-monitor`、`Robert-Wang-08/dsh-subagent-acp-resilient`），本仓保留同版本源码副本供 profile 以 `link:` 登记（`packed` profile 走 GitHub tag 安装）。
 
@@ -179,6 +180,7 @@ Windows 快捷入口：`launch-superagent.cmd` 默认委托现有服务脚本启
 ![monitor-panel](dsh-plugin-subagent-monitor/docs/screenshots/monitor-panel.png)
 | `dsh-plugin-ptc-switches` | 0.2.0 | PTC 开关的热切换 UI（不改配置文件即可开关各模式） | — |
 | `dsh-plugin-new-session` | 0.2.0 | 会话内一句话开**独立顶层会话**（等价 GUI「新建会话」，不是 subagent）：`new_session` 调 `sessionController.create/rename/prompt`，默认继承当前会话的**工作区**，可带标题与首条消息；配套项目级 skill `new-session` | 官方把该能力只留给 GUI 的 `session/create` RPC，agent 工具集里没有，自写补齐 |
+| `dsh-plugin-focus-task-checkpoint` | 0.2.0 | **Focus Hub 检查点钩子**：`turn/end` 时若动作清单相对上次成功提交有变化，就调用 skill `focus-task` 的 `scripts/submit.mjs` 提交一条 `agent-claimed` 检查点与建议任务候选；子代理、无 `.focus-hub.json` 的工作区跳过，API 不可达落 outbox | 自写原因：Focus Hub 需要按轮次累积会话证据，宿主没有「清单变化即提交」的事件出口；插件只读清单、不建任务，人工采纳闸门不变 |
 | `dsh-permission-compat` | 0.1.0 | **宿主补丁工具**：直接改写已装 dsh 模块（sandbox/pwsh/bash/fs）修宿主权限行为 | 不能作为 `dsh plugin` 依赖安装（带外 apply/verify/revert，带 .bak 备份），锁里标 `installable: false` |
 
 `dsh-plugin-new-session` / `dsh-plugin-session-id` 在新设备上各登记一次，之后
