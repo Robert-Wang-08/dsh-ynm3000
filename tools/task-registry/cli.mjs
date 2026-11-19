@@ -336,7 +336,7 @@ function cmdFeishu() {
   }
   if (action === 'preflight' || action === 'status') {
     let cli = null
-    try { cli = execFileSync('lark-cli', ['--version'], { encoding: 'utf8' }).trim() } catch { /* not installed */ }
+    try { cli = execFileSync('lark-cli', ['--version'], { encoding: 'utf8', shell: true }).trim() } catch { /* not installed */ }
     const payload = {
       feishu: { state: tree.feishuState, url: tree.feishuUrl, binding_doc: paths.feishu },
       larkCli: cli || 'missing',

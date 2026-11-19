@@ -97,6 +97,7 @@ export function parseTree(text, { file = 'tree.md' } = {}) {
   const inboxId = frontmatterValue(frontmatter, 'inbox_id') || 'T-INBOX'
   if (!byId.has(inboxId)) errors.push(`inbox task "${inboxId}" missing`)
 
+  const nullish = value => (!value || value === 'null' || value === '~' ? null : value)
   return {
     file,
     frontmatter,
@@ -105,8 +106,8 @@ export function parseTree(text, { file = 'tree.md' } = {}) {
     byId,
     inboxId,
     recentDays: Number(frontmatterValue(frontmatter, 'recent_days') || 30),
-    feishuUrl: frontmatterValue(frontmatter, 'feishu_url') || null,
-    feishuState: frontmatterValue(frontmatter, 'feishu_state') || 'pending_scope',
+    feishuUrl: nullish(frontmatterValue(frontmatter, 'feishu_url')),
+    feishuState: nullish(frontmatterValue(frontmatter, 'feishu_state')) || 'pending_scope',
     errors,
     warnings,
   }
