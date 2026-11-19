@@ -160,6 +160,18 @@ work 组只做本地检查并提醒；personal/thirdparty 干净且落后时才�
 
 Windows 快捷入口：`launch-superagent.cmd` 默认委托现有服务脚本启动 superagent 并打开管理页；`launch-superagent.cmd status` / `url` 可查询状态或地址。它不会构建代码或安装插件。新改动只有在子仓库成功推送、远端可读取该 SHA 后，才能更新并推送根仓库的子模块指针。
 
+## 近期任务表与总结打标（task-registry，2026-11-19）
+
+`tools/task-registry` 给 `SUMMARY_*.md` 自动打任务标签，并在 vault 维护一张可拖拽的「近期任务表」（稳定 ID、一层/二层、Markdown）。不改历史总结正文、命名与 `SUMMARY_INDEX.md` 水位；ticket 级登记仍在 `设备-agent-任务清单/records`。
+
+- 工具与命令：[tools/task-registry/README.md](tools/task-registry/README.md)
+- 设计 / 验收 / 回滚：[design](docs/task-registry/design.md)、[acceptance](docs/task-registry/acceptance.md)、[rollback](docs/task-registry/rollback.md)
+- 本机安装（publisher 才注册每 10 分钟扫描）：`pwsh -File scripts/task-registry/install.ps1 -Vault <vault> -WhatIf`，去掉 `-WhatIf` 生效；`-Uninstall` 停用
+- session-summary 收尾桥接（默认 DryRun）：`pwsh -File scripts/task-registry/deploy-summary-bridge.ps1 -WhatIf`
+- 跨设备：[docs/bootstrap/PROMPT-任务目录跨设备.md](docs/bootstrap/PROMPT-任务目录跨设备.md)
+
+无新增 DSH 插件、无 profile 依赖与 bundle 顺序变更。飞书文档形态需应用加 `docx:document`、`docx:document:create` 与 `drive:drive`、`drive:file` scope；未批前本地形态照常，链接不伪造。
+
 ## 能力清单（逐组件：用途与 fix 原因）
 
 ### 自写插件

@@ -1,0 +1,56 @@
+{
+  "version": "1.0.0",
+  "notes": [
+    "Only leaves carry rules; parents are rolled up for display.",
+    "workspaces: dsh | ncbs | logseq (derived from cwd and evidence paths).",
+    "keywords_all must all appear; keywords_any needs at least one; exclude wins.",
+    "A summary item without evidence (path/commit/report/cwd) is never auto-labelled."
+  ],
+  "tasks": {
+    "T-NCBS-CR-DATASTD": {
+      "aliases": ["数标治理", "数据标准治理"],
+      "workspaces": ["ncbs"],
+      "keywords_all": ["标准"],
+      "keywords_any": ["数标", "数据标准"],
+      "exclude": ["代码规范", "编码规范"]
+    },
+    "T-NCBS-CR-ROOTWORD": {
+      "aliases": ["数据词根", "词根统一"],
+      "workspaces": ["ncbs", "logseq"],
+      "keywords_all": ["词根"],
+      "keywords_any": ["数据词根", "词根统一", "词表"],
+      "exclude": ["翻译词根", "翻译词典"]
+    },
+    "T-NCBS-CR-TRANSROOT": {
+      "aliases": ["翻译词根", "翻译词典"],
+      "workspaces": ["ncbs", "logseq"],
+      "keywords_all": ["翻译"],
+      "keywords_any": ["词根", "词典"],
+      "exclude": []
+    },
+    "T-DSH-TOOLS-MAINT": {
+      "aliases": ["DSH维护", "DSH运维"],
+      "workspaces": ["dsh"],
+      "keywords_any": ["维护", "运维", "故障修复", "升级", "修复"],
+      "exclude": []
+    },
+    "T-DSH-TOOLS-TEST": {
+      "aliases": ["DSH测试"],
+      "workspaces": ["dsh"],
+      "keywords_any": ["单元测试", "回归测试", "测试通过", "node --test", "vitest", "pytest"],
+      "exclude": []
+    },
+    "T-DSH-TOOLS-VERIFY": {
+      "aliases": ["DSH验证"],
+      "workspaces": ["dsh"],
+      "keywords_any": ["运行态", "验收", "健康核验", "生效", "重启后"],
+      "exclude": []
+    },
+    "T-DSH-TOOLS-BACKUP": {
+      "aliases": ["DSH备份"],
+      "workspaces": ["dsh"],
+      "keywords_any": ["备份", "快照", "backup"],
+      "exclude": []
+    }
+  }
+}
