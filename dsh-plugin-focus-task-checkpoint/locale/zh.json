@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Focus Task 检查点",
+    "description": "轮次结束且动作清单有变化时，向 Focus Hub 收件箱提交一条声称待验证的检查点。"
+  }
+}

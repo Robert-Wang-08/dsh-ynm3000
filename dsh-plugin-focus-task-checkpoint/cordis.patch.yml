@@ -1,0 +1,4 @@
+- insert:
+    - id: focus-task-checkpoint
+      name: '@local/dsh-plugin-focus-task-checkpoint'
+      config: {}
