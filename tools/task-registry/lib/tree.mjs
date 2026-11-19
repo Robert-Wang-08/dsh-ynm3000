@@ -127,7 +127,9 @@ export function updateNodeMeta(text, updates) {
     const status = parts[1] || ''
     const date = update.date !== undefined ? update.date : (parts[2] || '')
     const count = update.count === undefined ? (parts[3] || '') : (update.count > 0 ? `${update.count} 篇` : '')
-    const next = `${m[1]}- \`${m[2].trim()}\` ${title} ｜${status}${date ? `｜${date}` : ''}${count ? `｜${count}` : ''}`
+    const extra = parts.slice(4).filter(Boolean).join('｜')
+    const tail = [status, date, count, extra].filter(Boolean).join('｜')
+    const next = `${m[1]}- \`${m[2].trim()}\` ${title}${tail ? ` ｜${tail}` : ''}`
     if (next !== line) changed = true
     return next
   })
