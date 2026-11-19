@@ -1,0 +1,13 @@
+{
+  "name": "dsh-task-registry",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Session-summary task tagging and the global recent-task table for the 1.logseq vault.",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  }
+}
