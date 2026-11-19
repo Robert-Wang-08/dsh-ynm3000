@@ -9,7 +9,7 @@
 param(
   [string]$Repo = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path,
   [string]$SkillPath = '',
-  [string]$Vault = 'C:\syncJIANGUO\1.logseq',
+  [string]$Vault = $env:TASK_REGISTRY_VAULT,
   [switch]$Apply,
   [switch]$Uninstall
 )
@@ -37,6 +37,7 @@ if ($Uninstall) {
 }
 
 if ($text -match [regex]::Escape($begin)) { Write-Host '[bridge] already installed'; return }
+if (-not $Vault) { throw 'missing -Vault (or set TASK_REGISTRY_VAULT); it is written into the bridge command' }
 
 $block = @'
 

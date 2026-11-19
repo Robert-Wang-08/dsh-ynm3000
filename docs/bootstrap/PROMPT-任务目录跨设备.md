@@ -39,8 +39,8 @@ Get-ScheduledTask -TaskName TaskRegistry-Sync
 session-summary 的收尾桥接默认 DryRun：
 
 ```powershell
-pwsh -File <repo>\scripts\task-registry\deploy-summary-bridge.ps1 -WhatIf
-pwsh -File <repo>\scripts\task-registry\deploy-summary-bridge.ps1 -Apply
+pwsh -File <repo>\scripts\task-registry\deploy-summary-bridge.ps1 -Vault <vault> -WhatIf
+pwsh -File <repo>\scripts\task-registry\deploy-summary-bridge.ps1 -Vault <vault> -Apply
 ```
 
 桥接只在 `SKILL.md` 末尾加一段带标记的说明；已有 `.bak-before-taskbridge-*`，`-Uninstall` 可撤。

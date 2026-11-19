@@ -167,7 +167,7 @@ Windows 快捷入口：`launch-superagent.cmd` 默认委托现有服务脚本启
 - 工具与命令：[tools/task-registry/README.md](tools/task-registry/README.md)
 - 设计 / 验收 / 回滚：[design](docs/task-registry/design.md)、[acceptance](docs/task-registry/acceptance.md)、[rollback](docs/task-registry/rollback.md)
 - 本机安装（publisher 才注册每 10 分钟扫描）：`pwsh -File scripts/task-registry/install.ps1 -Vault <vault> -WhatIf`，去掉 `-WhatIf` 生效；`-Uninstall` 停用
-- session-summary 收尾桥接（默认 DryRun）：`pwsh -File scripts/task-registry/deploy-summary-bridge.ps1 -WhatIf`
+- session-summary 收尾桥接（默认 DryRun）：`pwsh -File scripts/task-registry/deploy-summary-bridge.ps1 -Vault <vault> -WhatIf`
 - 跨设备：[docs/bootstrap/PROMPT-任务目录跨设备.md](docs/bootstrap/PROMPT-任务目录跨设备.md)
 
 无新增 DSH 插件、无 profile 依赖与 bundle 顺序变更。飞书文档形态需应用加 `docx:document`、`docx:document:create` 与 `drive:drive`、`drive:file` scope；未批前本地形态照常，链接不伪造。
