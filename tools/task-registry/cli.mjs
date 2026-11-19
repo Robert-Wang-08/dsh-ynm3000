@@ -298,6 +298,7 @@ function cmdCheck() {
     const entry = links.entries.find(item => item.summary === name)
     const fmIds = taskIds(target.parsed.fm)
     if (!entry && !fmIds.length) problems.push({ summary: name, problem: 'not linked' })
+    if (!entry && fmIds.length) problems.push({ summary: name, problem: 'labelled but not indexed (run scan --apply)' })
     for (const id of fmIds) if (!tree.byId.has(id) || !isTaskId(id)) problems.push({ summary: name, problem: `invalid id ${id}` })
     if (entry) for (const a of entry.assignments || []) if (!tree.byId.has(a.task_id)) problems.push({ summary: name, problem: `unknown link ${a.task_id}` })
   }

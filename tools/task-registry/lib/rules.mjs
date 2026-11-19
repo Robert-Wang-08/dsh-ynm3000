@@ -73,12 +73,17 @@ export function matchItem(text, rules) {
 export function classifySummary({ body }, rules) {
   const items = itemTexts(body)
   const perTask = new Map()
+  const locator = title => {
+    const m = title.match(/^(\d+|[A-Za-z]+\d*)[\s.、:：]/)
+    return m ? `§${m[1]}` : '§item'
+  }
   for (const item of items) {
     const taskIds = matchItem(item.text, rules)
     for (const id of taskIds) {
       const entry = perTask.get(id) || { task_id: id, hits: 0, evidence: [] }
       entry.hits += 1
-      if (entry.evidence.length < 3) entry.evidence.push(item.title.slice(0, 60))
+      const label = locator(item.title)
+      if (entry.evidence.length < 3 && !entry.evidence.includes(label)) entry.evidence.push(label)
       perTask.set(id, entry)
     }
   }
