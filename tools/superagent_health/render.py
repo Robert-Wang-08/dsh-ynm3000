@@ -13,24 +13,36 @@ LABEL={"reachable":"接口可达","online_degraded":"在线但降级","unknown":
 OUTCOME={"completed":"已完成","merged":"已完成","stopped":"已停止","dropped":"已结束未完成","closed":"已结束未完成"}
 EFFORT_INTRO="运行时长为建单到结束（含等待人工输入）；输入轮次为去重后的触发输入，交手为派给 worker 的次数。"
 EFFORT_TOKEN_INTRO="token 为工单 worker 会话全时用量，不含主控/子代理/外部 ACP；无 usage 记未知，不填 0。"
-# Default state folder, shown as a profile placeholder so the report does not carry a literal user path.
-DEFAULT_STATE_DIR="%USERPROFILE%\\.dsh\\state\\superagent-health"
 
 def state_display(state_dir=None):
-    """The state folder as it appears in a report hint.
+    """The state folder as a complete absolute path.
 
     A device may move its state folder to a synced disk so the outbox and dedupe
     watermarks survive a rebuild; a hint must then name the folder actually in use
     instead of the default one, or it points at a path that no longer exists.
+    Feishu cannot open a local path, so the report prints the whole location rather
+    than a placeholder that is not a location at all.
     """
     raw=str(state_dir or "").strip()
     if not raw:
-        return DEFAULT_STATE_DIR
-    home=str(Path.home()).rstrip("\\/")
-    text=raw.rstrip("\\/")
-    if home and text.lower().startswith(home.lower()):
-        text="%USERPROFILE%"+text[len(home):]
-    return text
+        return str(Path.home()/".dsh"/"state"/"superagent-health")
+    return raw.rstrip("\\/")
+
+def link_block(links):
+    """The durable address of a report: its Feishu document and the local file.
+
+    Rendered once near the top so a reader who opens the message after it is
+    truncated still finds both. The local entry is plain visible text on purpose:
+    a `file:///` link is not clickable in Feishu.
+    """
+    if not isinstance(links,dict) or not (links.get("feishu") or links.get("local")):
+        return []
+    lines=["", "**报告位置**", ""]
+    if links.get("feishu"):
+        lines.append("- **飞书文档**：["+str(links.get("feishu_label") or "打开完整报告")+"]("+str(links["feishu"])+")")
+    if links.get("local"):
+        lines.append("- **本机文件**：`"+str(links["local"])+"`")
+    return lines
 
 # One-line pointer back to the full report, so a focused attention notice is not a dead end.
 # The attention snapshot is the same full snapshot as the health report, kept under the attention title.
@@ -120,7 +132,7 @@ def _progress_line(ticket):
     text=str(recap.get("text") or "").strip()
     if not text or recap.get("quality")=="unavailable":
         return None
-    line="最后进展（worker 报告）："+safe_text(text,180)
+    line="**最后进展（worker 报告）**："+safe_text(text,180)
     if recap.get("mayBeStale"):
         line+="（早于工单最新更新）"
     return line
@@ -183,11 +195,12 @@ def deployment_warning(deployment):
     return ("**部署警告**：运行代码 " + branch + "@" + revision + " 有未提交改动：" + "、".join(details)
             + "；定时任务执行的不是 main 上已提交的版本，请提交或还原这些文件。")
 
-def render(snapshot,kind="健康报告"):
+def render(snapshot,kind="健康报告",links=None):
     tag=deployment_tag(snapshot.get("deployment"))
     header=("统计截至 " + snapshot["windowEnd"] + "；状态采集于 " + snapshot["collectedAt"]
             + ("；" + tag if tag else ""))
     lines=["# Superagent · " + kind, "", header]
+    lines += link_block(links)
     warning=deployment_warning(snapshot.get("deployment"))
     if warning:
         lines += ["", warning]
@@ -196,10 +209,10 @@ def render(snapshot,kind="健康报告"):
         if item.get("collectionError"):
             lines += ["", "- 采集异常："+item["collectionError"]+"（"+ERROR_HINT.get(item["collectionError"],"未分类")+"），工单与人工待办数量未知。"]
             continue
-        lines += ["", "- 今日完成工单："+str(item["todayCompleted"]),
-                  "- 未完成："+str(item["openTickets"]),
-                  "- 工单待人工："+str(len(item["humanItems"])),
-                  "- 今日有执行事件的关联会话："+str(item["activeManagedSessionsObserved"])+"（缺证据 "+str(item["missingSessionEvidence"])+"；仅主控/工单worker，子代理未证实完整覆盖）"]
+        lines += ["", "- 今日完成工单：**"+str(item["todayCompleted"])+"**",
+                  "- 未完成：**"+str(item["openTickets"])+"**",
+                  "- 工单待人工：**"+str(len(item["humanItems"]))+"**",
+                  "- 今日有执行事件的关联会话：**"+str(item["activeManagedSessionsObserved"])+"**（缺证据 "+str(item["missingSessionEvidence"])+"；仅主控/工单worker，子代理未证实完整覆盖）"]
         if item["errorComponents"]:
             lines += ["", "**异常组件**：" + "、".join(item["errorComponents"])]
         if item.get("paused"):
@@ -230,12 +243,14 @@ def render(snapshot,kind="健康报告"):
         if effort:
             lines += ["", "**任务投入（本窗口结束，按运行时长排序）**", EFFORT_INTRO, EFFORT_TOKEN_INTRO]
             for index,task in enumerate(effort,1):
-                line=("- "+str(index)+". **"+str(task.get("ticketId") or "")[:8]+"** "+safe_text(task.get("title"),60)+" · "
-                      +OUTCOME.get(task.get("outcome"),"已结束")+" · 输入 "+str(task.get("inputRounds"))+" 轮 / 交手 "
-                      +str(task.get("handoffRounds"))+" 次 · 运行 "+span(task.get("elapsedSeconds"))+" · "+tokens_text(task.get("tokens")))
+                lines.append("- "+str(index)+". **"+str(task.get("ticketId") or "")[:8]+"** "+safe_text(task.get("title"),60)
+                             + " · **" + OUTCOME.get(task.get("outcome"),"已结束") + "**")
+                lines.append("  - 运行 **"+span(task.get("elapsedSeconds"))+"**；输入 **"+str(task.get("inputRounds"))+"** 轮 / 交手 **"
+                             + str(task.get("handoffRounds"))+"** 次")
+                tokens=tokens_text(task.get("tokens"))
                 if task.get("tokenQuality")=="partial":
-                    line+="（部分响应无usage）"
-                lines.append(line)
+                    tokens+="（部分响应无usage）"
+                lines.append("  - "+tokens)
             total=item.get("taskTokenTotal")
             if isinstance(total, dict):
                 lines.append("- 本窗口结束任务合计 "+tokens_text(total)+"（"+str(item.get("taskTokenTasks") or 0)+" 项有 usage"
@@ -254,18 +269,53 @@ def render(snapshot,kind="健康报告"):
                 ticket=tickets.get(issue.get("ticketId"))
                 lines.append("- "+(_ticket_line(ticket) if ticket is not None else "**"+str(issue.get("ticketId") or "")[:8]+"**"))
                 decision,action=_decision(issue,ticket)
-                lines.append("  - 待决问题："+decision)
-                lines.append("  - 需要你做："+action)
+                lines.append("  - **待决问题**："+decision)
+                lines.append("  - **需要你做**："+action)
                 wait=_wait_line(issue,ticket,snapshot)
                 if wait:
                     lines.append("  - "+wait)
-                lines.append("  - 事项："+str(issue.get("issueId") or issue.get("id") or "")+"；期限："+str(issue.get("deadline") or "未设置"))
+                lines.append("  - **事项**："+str(issue.get("issueId") or issue.get("id") or "")+"；**期限**："+str(issue.get("deadline") or "未设置"))
             lines.append("- 以上事项请回对应工单处理；通知不等于授权。")
     lines += ["", "## 今日用量"]
     for item in snapshot["dashboard"]:
         lines.append("- dashboard："+item["quality"]+" / "+str(item.get("error") or "仅状态已读")+"。未取得可核验完整金额，不填零；worker目录覆盖待修复。")
     lines += ["- 关联会话事件usage仅用于观测，可有缓存字段包含关系差异/子代理遗漏；不冒充全局账单。",
               "- 本机采集只能说明接口可达，不保证调度循环及整机离线告警。"]
+    return chr(10).join(lines)
+
+def render_brief(snapshot,kind="健康报告",links=None):
+    """A chat-sized summary: one line per instance, the pending decisions, and links.
+
+    The manager asked for an option that sends only a brief plus the Feishu document
+    and local file, so the long inventory stays in those two places. It still names
+    every instance, any incident and each waiting decision, because a brief that
+    hides them would defeat the report.
+    """
+    tag=deployment_tag(snapshot.get("deployment"))
+    lines=["# Superagent · "+kind+"（简报）",""]
+    lines.append("统计截至 "+snapshot["windowEnd"]+("；"+tag if tag else ""))
+    lines += link_block(links)
+    warning=deployment_warning(snapshot.get("deployment"))
+    if warning:
+        lines += ["", warning]
+    for item in snapshot["instances"]:
+        heading="**【"+item["id"]+"】** "+LABEL.get(item["health"],_label(item["health"]))
+        if item.get("collectionError"):
+            lines += ["", "- "+heading+"：采集异常 **"+item["collectionError"]+"**（"+ERROR_HINT.get(item["collectionError"],"未分类")+"），数字未知。"]
+            continue
+        lines += ["", "- "+heading+"：今日完成 **"+str(item["todayCompleted"])+"** · 未完成 **"+str(item["openTickets"])+"** · 待人工 **"+str(len(item["humanItems"]))+"**"]
+        if item["errorComponents"]:
+            lines.append("  - 异常组件："+"、".join(item["errorComponents"]))
+        if item.get("paused"):
+            lines.append("  - **调度已暂停**")
+        tickets={ticket["id"]:ticket for ticket in item["tickets"]}
+        for issue in item["humanItems"][:3]:
+            decision,_=_decision(issue,tickets.get(issue.get("ticketId")))
+            lines.append("  - 待办 **"+str(issue.get("ticketId") or "")[:8]+"**："+safe_text(decision,80))
+        extra=len(item["humanItems"])-3
+        if extra>0:
+            lines.append("  - 另有 **"+str(extra)+"** 项待人工，见飞书文档")
+    lines += ["", "完整明细见上方飞书文档与本机文件。"]
     return chr(10).join(lines)
 
 def render_attention(snapshot,kind,issue,state_dir=None):
@@ -284,15 +334,15 @@ def render_attention(snapshot,kind,issue,state_dir=None):
     elif ticket_id:
         lines.append("- 工单："+"**"+ticket_id[:8]+"**")
     decision,action=_decision(issue,ticket)
-    lines.append("- 待决问题："+decision)
-    lines.append("- 需要你做："+action)
+    lines.append("- **待决问题**："+decision)
+    lines.append("- **需要你做**："+action)
     progress=_progress_line(ticket)
     if progress:
         lines.append("- "+progress)
     wait=_wait_line(issue,ticket,snapshot)
     if wait:
         lines.append("- "+wait)
-    lines.append("- 事项："+str(issue.get("id") or issue.get("issueId") or "")+"；期限："+str(issue.get("deadline") or "未设置"))
+    lines.append("- **事项**："+str(issue.get("id") or issue.get("issueId") or "")+"；**期限**："+str(issue.get("deadline") or "未设置"))
     lines += ["", "请回原工单处理；通知不等于授权。", "", REPORT_HINT(state_dir)]
     if instance is not None:
         others=[i for i in instance.get("humanItems",[]) if i.get("issueId")!=issue.get("id")]

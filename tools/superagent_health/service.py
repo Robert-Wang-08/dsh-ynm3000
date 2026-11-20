@@ -14,7 +14,8 @@ from common import CST, digest, instant, load_config, atomic_text
 from collect import collect
 from delivery import send, binding, binding_id, DeliveryError
 from deploy import deployment_state
-from render import report_text, render, chunks
+from publish import publish_report, configured as links_configured, PublishError
+from render import report_text, render, render_brief, chunks
 from store import Store
 
 @contextmanager
@@ -204,12 +205,81 @@ def supersede_unseen_alert(store,last):
     last["alertedAt"]=None
 
 
+# A full report is the kind the manager may want only as a brief plus links. Focused
+# notices (incident, attention, reminder) stay as they are: they are already short and
+# point at the scheduled report.
+FULL_REPORTS={"启动健康报告":"startup","定期健康报告":"scheduled","日报快照":"daily-snapshot","前日自然日闭账":"daily-close"}
+
+def full_report(kind):
+    return any(str(kind).startswith(prefix) for prefix in FULL_REPORTS)
+
+def report_slug(kind):
+    for prefix,slug in FULL_REPORTS.items():
+        if str(kind).startswith(prefix):
+            return slug
+    return "report"
+
+def local_report(config,kind,text,snapshot):
+    """Keep one Markdown file per report, so the path in the message stays valid.
+
+    `latest.md` is overwritten every tick; a message that names only it would lose
+    the report the manager was reading. The filename carries the collection time.
+    """
+    stamp=datetime.fromisoformat(snapshot["collectedAt"]).astimezone(CST).strftime("%Y%m%d-%H%M")
+    folder=Path(config["state_dir"])/"reports"
+    folder.mkdir(parents=True,exist_ok=True)
+    target=folder/(stamp+"-"+report_slug(kind)+".md")
+    atomic_text(target,text)
+    return str(target)
+
+def report_links(config,kind,text,snapshot):
+    """The Feishu document and local file for a full report, or why no link was made.
+
+    Returns (links, error). The local file is written first: it must exist before the
+    message names it. When the document cannot be created the caller sends the full
+    text instead, so a publish failure never hides the report.
+    """
+    if not full_report(kind) or not links_configured(config):
+        return None,None
+    try:
+        local=local_report(config,kind,text,snapshot)
+    except OSError:
+        # A read-only or full disk must not stop the report from reaching the chat.
+        local=None
+    collected=datetime.fromisoformat(snapshot["collectedAt"]).astimezone(CST).strftime("%Y-%m-%d %H:%M")
+    title="Superagent · "+kind+" · "+collected
+    try:
+        document=publish_report(config,title,text)
+    except (DeliveryError,PublishError) as exc:
+        return ({"local":local} if local else None),str(exc)
+    links={"feishu":document["url"]}
+    if local:
+        links["local"]=local
+    return links,None
+
+def report_body(config,snapshot,kind,text,links):
+    """Full or brief text with the links block; brief only when a Feishu copy exists."""
+    style=str(((config.get("delivery") or {}).get("chat_style") or "full")).strip().lower()
+    if links and links.get("feishu") and style=="brief":
+        return render_brief(snapshot,kind,links)
+    if links:
+        return render(snapshot,kind,links)
+    return text
+
 def enqueue_report(store,config,snapshot,key,kind,urgent=False,issue=None,health=None):
     resolved=binding(config)
     fingerprint=binding_id(config,resolved)
     now=datetime.fromisoformat(snapshot["collectedAt"])
     group=digest([fingerprint,key,config["instances"]])
-    parts=chunks(report_text(snapshot,kind,issue,health,state_dir=config.get("state_dir")))
+    if store.state_of(group+"-1") is not None:
+        # The same report is already queued or delivered; do not create a second document.
+        return group
+    text=report_text(snapshot,kind,issue,health,state_dir=config.get("state_dir"))
+    links,error=report_links(config,kind,text,snapshot)
+    body=report_body(config,snapshot,kind,text,links)
+    if error:
+        body+=chr(10)+chr(10)+"**提示**：飞书文档未生成（"+error+"），本次直接发送完整内容。"
+    parts=chunks(body)
     available=now.timestamp() if urgent else max(next_open(now,config),snapshot.get("notBefore",0))
     entries=[]
     for index,text in enumerate(parts):

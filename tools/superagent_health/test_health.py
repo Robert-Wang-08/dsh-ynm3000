@@ -1,6 +1,7 @@
 """Behavioral checks for health evidence and reliable delivery boundaries."""
 import json
 import os
+import re
 import shutil
 import subprocess
 import tempfile
@@ -13,7 +14,8 @@ from events import fold_events
 from collect import instance, report_from_detail, tickets, effort_from_detail
 from delivery import send, binding_id, DeliveryError
 from deploy import deployment_state
-from render import chunks, render, render_attention, report_text
+from render import chunks, render, render_attention, render_brief, report_text
+from publish import publish_report, PublishError
 from store import Store
 from service import quiet, next_open, plan, dispatch, enqueue_report, settle_seconds, tick, migrate_state
 
@@ -74,13 +76,24 @@ class EvidenceTests(unittest.TestCase):
         with patch("collect.get",return_value=({"items":[],"total":1,"next_offset":0},None)):
             self.assertEqual(tickets("http://localhost","open")[1],"pagination_cycle")
 
-    def test_safe_text_redacts_key_path_and_channel_id(self):
-        text=safe_text("api_key=secretvalue oc_123456789012 C:/private/folder/file.md done")
+    def test_safe_text_redacts_key_and_channel_id_but_keeps_locations(self):
+        text=safe_text("api_key=secretvalue oc_123456789012 https://example.com/pull/3 C:/private/folder/file.md done")
         self.assertNotIn("secretvalue",text)
-        self.assertNotIn("private",text)
         self.assertNotIn("oc_",text)
+        # A local location and a public URL are both shown in full: a chat client cannot
+        # open a placeholder, and mangling the URL into "http[本地路径]" was a real defect.
+        self.assertIn("C:/private/folder/file.md",text)
+        self.assertIn("https://example.com/pull/3",text)
         self.assertIsNone(instant("not-a-time"))
         self.assertIsNone(instant("2026-11-12T00:00:00"))
+
+    def test_safe_text_shows_a_local_file_url_as_its_path(self):
+        self.assertEqual(safe_text("见 file:///C:/out/report.md"),"见 C:/out/report.md")
+
+    def test_safe_text_keeps_a_local_markdown_link_target_visible(self):
+        for raw in ("[报告](C:/out/r.html)","[报告](<C:/out/r.html>)","[报告](file:///C:/out/r.html)"):
+            self.assertEqual(safe_text(raw),"报告（C:/out/r.html）")
+        self.assertEqual(safe_text("[PR](https://github.com/a/b/pull/3)"),"[PR](https://github.com/a/b/pull/3)")
 
     def test_renderer_chunks_preserve_all_lines_and_limit(self):
         text="一"*8000+chr(10)+"完成"
@@ -93,8 +106,8 @@ class EvidenceTests(unittest.TestCase):
         text=render(sample())
         self.assertTrue(text.startswith("# Superagent · 健康报告"))
         self.assertIn("## 【test】接口可达",text)
-        self.assertIn("- 今日完成工单：1",text)
-        self.assertIn("- 工单待人工：0",text)
+        self.assertIn("- 今日完成工单：**1**",text)
+        self.assertIn("- 工单待人工：**0**",text)
 
     def test_attention_notice_states_the_decision_and_the_action(self):
         snap=sample()
@@ -105,9 +118,9 @@ class EvidenceTests(unittest.TestCase):
         text=render_attention(snap,"待人工事项",issue)
         self.assertTrue(text.startswith("# Superagent · 待人工事项"))
         self.assertIn("- 工单：**t1** 语义本体工单 · 待人工",text)
-        self.assertIn("- 待决问题：是否验收这单的交付（PR #12）",text)
-        self.assertIn("- 需要你做：复核 PR #12",text)
-        self.assertIn("- 最后进展（worker 报告）：PR #12 已提交并推送",text)
+        self.assertIn("- **待决问题**：是否验收这单的交付（PR #12）",text)
+        self.assertIn("- **需要你做**：复核 PR #12",text)
+        self.assertIn("- **最后进展（worker 报告）**：PR #12 已提交并推送",text)
         self.assertIn("已等待 30m",text)
         self.assertNotIn("原因：review",text)
         self.assertNotIn("- 问题：语义本体工单",text)
@@ -125,8 +138,8 @@ class EvidenceTests(unittest.TestCase):
         for reason,(question,needle) in cases.items():
             issue={"id":"test:t1:"+reason,"instanceId":"test","ticketId":"t1","question":question,"reason":reason,"deadline":None}
             text=render_attention(snap,"待人工事项",issue)
-            self.assertIn("- 待决问题：",text)
-            self.assertIn("- 需要你做：",text)
+            self.assertIn("- **待决问题**：",text)
+            self.assertIn("- **需要你做**：",text)
             self.assertIn(needle,text)
             self.assertNotIn("原因："+reason,text)
 
@@ -137,8 +150,8 @@ class EvidenceTests(unittest.TestCase):
         snap["instances"][0]["humanItems"]=[{"issueId":"test:t1:answer","revision":"r","ticketId":"t1","reason":"answer","question":"是否继续？","updatedAt":"2026-11-12T13:30:00+08:00"}]
         text=render(snap)
         self.assertIn("**需要管理人**",text)
-        self.assertIn("  - 待决问题：是否继续？",text)
-        self.assertIn("  - 需要你做：",text)
+        self.assertIn("  - **待决问题**：是否继续？",text)
+        self.assertIn("  - **需要你做**：",text)
         self.assertIn("已等待 30m",text)
         self.assertNotIn("原因：answer",text)
 
@@ -239,6 +252,133 @@ class DeliveryTests(unittest.TestCase):
             with self.assertRaises(DeliveryError) as cm:
                 send({},"body","key",runner=lambda *a,**k:result)
             self.assertTrue(cm.exception.ambiguous)
+
+class ReportLinkTests(unittest.TestCase):
+    """A full report also lives in a Feishu document plus one local file."""
+    def config(self, directory, **delivery):
+        block={"enabled":True,"identity":"bot","binding_confirmed":True,
+               "content_policy":"redacted_health_report_v1","chat_style":"full",
+               "report_links":{"enabled":True,"share_open_ids":["ou_manager"]}}
+        block.update(delivery)
+        return {"state_dir":directory,"instances":[{"id":"test"}],"delivery":block}
+
+    def test_publish_creates_a_markdown_document_and_shares_it_with_the_manager(self):
+        calls=[]
+        def runner(argv,**kwargs):
+            calls.append((argv,kwargs.get("input")))
+            if "+create" in argv:
+                return subprocess.CompletedProcess(argv,0,json.dumps({"ok":True,"data":{"document":{"url":"https://my.feishu.cn/docx/d1","document_id":"d1"}}}),"")
+            return subprocess.CompletedProcess(argv,0,json.dumps({"ok":True,"data":{}}),"")
+        config={"delivery":{"report_links":{"share_open_ids":["ou_manager"]}}}
+        with patch("publish.binding",return_value=("oc_target","cli","configdir")):
+            got=publish_report(config,"Superagent · 定期健康报告","正文",runner=runner)
+        self.assertEqual(got["url"],"https://my.feishu.cn/docx/d1")
+        create=next(argv for argv,_ in calls if "+create" in argv)
+        self.assertIn("--doc-format",create)
+        self.assertIn("markdown",create)
+        self.assertEqual(calls[0][1],"正文")
+        share=next(argv for argv,_ in calls if "+member-add" in argv)
+        self.assertIn("ou_manager",share)
+        self.assertIn("--perm",share)
+
+    def test_publish_failure_is_reported_instead_of_claiming_a_link(self):
+        result=subprocess.CompletedProcess([],1,json.dumps({"ok":False,"error":{"code":99991672}}),"")
+        with patch("publish.binding",return_value=("oc_target","cli","configdir")):
+            with self.assertRaises(PublishError) as cm:
+                publish_report({"delivery":{"report_links":{"share_open_ids":["ou_manager"]}}},"标题","正文",runner=lambda *a,**k:result)
+        self.assertEqual(cm.exception.code,"doc_error_99991672")
+
+    def test_brief_names_the_counts_pending_items_and_both_locations(self):
+        snap=sample()
+        snap["instances"][0]["humanItems"]=[{"issueId":"test:t1:review","ticketId":"t1","reason":"review","question":"语义本体工单"}]
+        snap["instances"][0]["tickets"]=[{"id":"t1","title":"语义本体工单","stage":"person"}]
+        links={"feishu":"https://my.feishu.cn/docx/d1","local":r"C:\state\reports\x.md"}
+        text=render_brief(snap,"定期健康报告",links)
+        self.assertTrue(text.startswith("# Superagent · 定期健康报告（简报）"))
+        self.assertIn("- **飞书文档**：[打开完整报告](https://my.feishu.cn/docx/d1)",text)
+        self.assertIn(r"- **本机文件**：`C:\state\reports\x.md`",text)
+        self.assertIn("今日完成 **1**",text)
+        self.assertIn("待办 **t1**",text)
+        self.assertNotIn("任务投入",text)
+        self.assertNotIn("今日用量",text)
+
+    def test_brief_switch_enqueues_a_brief_with_document_and_full_local_path(self):
+        with tempfile.TemporaryDirectory() as directory:
+            store=Store(directory)
+            config=self.config(directory,chat_style="brief")
+            with patch("service.binding",return_value=("oc_target","cli","configdir")), \
+                 patch("service.publish_report",return_value={"url":"https://my.feishu.cn/docx/d1","token":"d1"}) as publisher:
+                enqueue_report(store,config,sample(),"slot:1","定期健康报告")
+            self.assertEqual(publisher.call_count,1)
+            payload=json.loads(store.db.execute("SELECT payload FROM outbox").fetchone()["payload"])
+            self.assertIn("（简报）",payload["text"])
+            self.assertIn("https://my.feishu.cn/docx/d1",payload["text"])
+            local=re.search(r"本机文件\*\*：`([^`]+)`",payload["text"]).group(1)
+            self.assertTrue(Path(local).is_file())
+            self.assertIn("- 今日完成工单：**1**",Path(local).read_text(encoding="utf-8"))
+            store.close()
+
+    def test_a_publish_failure_sends_the_full_report_with_a_note(self):
+        with tempfile.TemporaryDirectory() as directory:
+            store=Store(directory)
+            config=self.config(directory)
+            with patch("service.binding",return_value=("oc_target","cli","configdir")), \
+                 patch("service.publish_report",side_effect=PublishError("doc_timeout")):
+                enqueue_report(store,config,sample(),"slot:1","定期健康报告")
+            text=json.loads(store.db.execute("SELECT payload FROM outbox").fetchone()["payload"])["text"]
+            self.assertIn("今日完成工单：**1**",text)
+            self.assertIn("飞书文档未生成（doc_timeout），本次直接发送完整内容",text)
+            store.close()
+
+    def test_links_are_off_by_default_and_write_no_extra_file(self):
+        with tempfile.TemporaryDirectory() as directory:
+            store=Store(directory)
+            store_config={"state_dir":directory,"instances":[{"id":"test"}]}
+            with patch("service.binding",return_value=("oc_target","cli","configdir")):
+                enqueue_report(store,store_config,sample(),"slot:1","定期健康报告")
+            text=json.loads(store.db.execute("SELECT payload FROM outbox").fetchone()["payload"])["text"]
+            self.assertNotIn("飞书文档",text)
+            self.assertFalse((Path(directory)/"reports").exists())
+            store.close()
+
+    def test_the_same_report_is_published_only_once(self):
+        with tempfile.TemporaryDirectory() as directory:
+            store=Store(directory)
+            config=self.config(directory,chat_style="brief")
+            with patch("service.binding",return_value=("oc_target","cli","configdir")), \
+                 patch("service.publish_report",return_value={"url":"https://my.feishu.cn/docx/d1","token":"d1"}) as publisher:
+                enqueue_report(store,config,sample(),"slot:1","定期健康报告")
+                enqueue_report(store,config,sample(),"slot:1","定期健康报告")
+            self.assertEqual(publisher.call_count,1)
+            store.close()
+
+    def test_a_local_file_failure_still_publishes_the_document_link(self):
+        with tempfile.TemporaryDirectory() as directory:
+            store=Store(directory)
+            config=self.config(directory)
+            with patch("service.binding",return_value=("oc_target","cli","configdir")), \
+                 patch("service.local_report",side_effect=OSError("disk full")), \
+                 patch("service.publish_report",return_value={"url":"https://my.feishu.cn/docx/d1","token":"d1"}):
+                enqueue_report(store,config,sample(),"slot:1","定期健康报告")
+            text=json.loads(store.db.execute("SELECT payload FROM outbox").fetchone()["payload"])["text"]
+            self.assertIn("https://my.feishu.cn/docx/d1",text)
+            self.assertNotIn("本机文件",text)
+            store.close()
+
+    def test_attention_notice_never_creates_a_document(self):
+        with tempfile.TemporaryDirectory() as directory:
+            store=Store(directory)
+            config=self.config(directory,chat_style="brief")
+            issue={"id":"test:t1:review","instanceId":"test","ticketId":"t1","question":"语义本体工单","reason":"review","deadline":None}
+            with patch("service.binding",return_value=("oc_target","cli","configdir")), \
+                 patch("service.publish_report") as publisher:
+                enqueue_report(store,config,sample(),"issue:1","待人工事项",issue=issue)
+            publisher.assert_not_called()
+            text=json.loads(store.db.execute("SELECT payload FROM outbox").fetchone()["payload"])["text"]
+            self.assertIn("# Superagent · 待人工事项",text)
+            self.assertNotIn("（简报）",text)
+            store.close()
+
 
 class ScheduleTests(unittest.TestCase):
     def test_quiet_hours_and_deferred_morning(self):
@@ -730,8 +870,10 @@ class TaskEffortTests(unittest.TestCase):
         text=render(snap)
         self.assertIn("任务投入（本窗口结束，按运行时长排序）",text)
         self.assertLess(text.index("长任务"),text.index("短任务"))
-        self.assertIn(" · 已停止 · 输入 5 轮 / 交手 4 次 · 运行 1h1m · token 入 2.0k / 出 100",text)
-        self.assertIn("运行 1m",text)
+        self.assertIn("- 1. **bbbbbbbb** 长任务 · **已停止**",text)
+        self.assertIn("  - 运行 **1h1m**；输入 **5** 轮 / 交手 **4** 次",text)
+        self.assertIn("  - token 入 2.0k / 出 100",text)
+        self.assertIn("运行 **1m**",text)
         self.assertIn("本窗口结束任务合计 token 入 2.5k / 出 150（2 项有 usage）",text)
 
 
@@ -985,10 +1127,12 @@ class StateHintTests(unittest.TestCase):
         self.assertIn(r"D:\cloud\health\AERO17\latest-attention.md",text)
         self.assertNotIn("%USERPROFILE%",text)
 
-    def test_default_hint_keeps_the_profile_placeholder(self):
+    def test_default_hint_keeps_the_full_local_path(self):
         snap,issue=self.issue()
         text=render_attention(snap,"待人工事项",issue)
-        self.assertIn("%USERPROFILE%\\.dsh\\state\\superagent-health\\latest-attention.md",text)
+        expected=str(Path.home()/".dsh"/"state"/"superagent-health"/"latest-attention.md")
+        self.assertIn(expected,text)
+        self.assertNotIn("%USERPROFILE%",text)
 
     def test_incident_hint_follows_the_configured_state_folder(self):
         text=report_text(sample(),"异常健康报告",health={"instanceId":"test"},state_dir=r"D:\cloud\health\AERO17")
