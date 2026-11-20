@@ -31,6 +31,11 @@
     "cli_env": "DSH_HEALTH_LARK_CLI",
     "config_dir_env": "DSH_HEALTH_LARK_CONFIG_DIR",
     "binding_confirmed": false,
-    "content_policy": "redacted_health_report_v1"
+    "content_policy": "redacted_health_report_v1",
+    "chat_style": "full",
+    "report_links": {
+      "enabled": false,
+      "share_open_ids": []
+    }
   }
 }

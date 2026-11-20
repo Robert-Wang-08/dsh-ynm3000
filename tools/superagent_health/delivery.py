@@ -28,9 +28,13 @@ def binding_id(config, resolved):
     delivery=config.get("delivery",{})
     return digest([recipient,str(Path(cli).resolve()),str(Path(directory).resolve()),delivery.get("identity"),delivery.get("content_policy")])
 
+def cli_env(directory):
+    """Environment for every bot CLI call, so credentials follow the bound profile."""
+    return {**os.environ,"LARKSUITE_CLI_CONFIG_DIR":directory,"NO_COLOR":"1","LARKSUITE_CLI_NO_UPDATE_NOTIFIER":"1","LARKSUITE_CLI_NO_SKILLS_NOTIFIER":"1"}
+
 def send(config,text,key,runner=subprocess.run):
     recipient,cli,directory=binding(config)
-    env={**os.environ,"LARKSUITE_CLI_CONFIG_DIR":directory,"NO_COLOR":"1","LARKSUITE_CLI_NO_UPDATE_NOTIFIER":"1","LARKSUITE_CLI_NO_SKILLS_NOTIFIER":"1"}
+    env=cli_env(directory)
     # --markdown lets lark-cli render headings, bullets and bold as a Feishu
     # rich-text post; the report is written as Markdown in render.py.
     # stdin avoids exposing report text to process command-line inspection.
