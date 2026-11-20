@@ -12,7 +12,9 @@
   3. package.json = web 的 dependencies + superagent 独有依赖（不写死插件名）+
      web 的 bundle 顺序 + superagent 独有 bundle；dsh-config-pack 始终排最后
   4. pnpm-workspace.yaml = web 的安装规则 + blockExoticSubdeps: false
-  5. cordis.patch.yml = web 的完整 patch + 标记行之后的自有覆盖段
+  5. cordis.patch.yml = web 的完整 patch + 标记行之后的自有覆盖段；目标 profile 的
+     `agent-default-model`（DSH 宿主默认模型）整块保留，不被 web 的值覆盖
+     （例如 superagent 用 opencode-go，web 用 ais-2dsglm）
   6. pnpm install（仅当依赖/锁文件/工作区规则变化）
   7. dsh --profile superagent --dump-config 校验组合结果
 
@@ -97,6 +99,37 @@ function Write-TextIfChanged([string]$Path, [string]$Text) {
   if ($null -ne $old -and ((Normalize-Text $old) -ceq (Normalize-Text $Text))) { return $false }
   if (-not $DryRun) { Write-Text $Path $Text }
   return $true
+}
+# 顶格 YAML 列表项（`- id: <RowId>`）及其缩进子行的范围：从该行到下一个顶格
+# 列表项、注释或文件末尾。返回子行数组；找不到时返回 $null。
+function Find-RowBlock([string[]]$Lines, [string]$RowId) {
+  $start = -1
+  for ($i = 0; $i -lt $Lines.Count; $i++) {
+    if ($Lines[$i] -match ('^- id:\s*' + [regex]::Escape($RowId) + '\s*$')) { $start = $i; break }
+  }
+  if ($start -lt 0) { return $null }
+  $end = $Lines.Count
+  for ($j = $start + 1; $j -lt $Lines.Count; $j++) {
+    if ($Lines[$j] -match '^-\s' -or $Lines[$j] -match '^#') { $end = $j; break }
+  }
+  $block = @($Lines[$start..($end - 1)])
+  while ($block.Count -gt 1 -and $block[-1].Trim() -eq '') { $block = @($block[0..($block.Count - 2)]) }
+  return ,$block
+}
+# 用 $Block 替换 $Lines 中的同名列表项；源里没有该项时追加到末尾。
+function Replace-RowBlock([string[]]$Lines, [string]$RowId, [string[]]$Block) {
+  $start = -1
+  for ($i = 0; $i -lt $Lines.Count; $i++) {
+    if ($Lines[$i] -match ('^- id:\s*' + [regex]::Escape($RowId) + '\s*$')) { $start = $i; break }
+  }
+  if ($start -lt 0) { return ,(@($Lines) + @($Block)) }
+  $end = $Lines.Count
+  for ($j = $start + 1; $j -lt $Lines.Count; $j++) {
+    if ($Lines[$j] -match '^-\s' -or $Lines[$j] -match '^#') { $end = $j; break }
+  }
+  $before = if ($start -gt 0) { @($Lines[0..($start - 1)]) } else { @() }
+  $after = if ($end -lt $Lines.Count) { @($Lines[$end..($Lines.Count - 1)]) } else { @() }
+  return ,(@($before) + @($Block) + @($after))
 }
 function Test-ProfileHostRunning([string]$Profile) {
   try {
@@ -249,10 +282,23 @@ for ($i = 0; $i -lt $dstLines.Count; $i++) {
 
 $patchMode = ''
 $newPatch = $null
+$srcLines = @($srcPatch -split "`n")
+# web 与 superagent 的宿主默认模型（`agent-default-model`）可以不同：superagent 被
+# 人明确要求用 opencode-go，web 仍是 ais-2dsglm。该行落在镜像区，直接拼接会把
+# superagent 的值静默改回 web 的值；这里用目标现有块替换源块，兑现“保留 superagent
+# 自有覆盖”的承诺。目标把该行放进自有覆盖段时不动它（自有段的行本来就在最后生效）。
 if ($markerIndex -ge 0) {
   $ownSection = ($dstLines[$markerIndex..($dstLines.Count - 1)] -join "`n").TrimEnd()
-  $newPatch = $srcPatch.TrimEnd() + "`n`n" + $ownSection + "`n"
-  $patchMode = '源全量 + 自有覆盖段'
+  $ownHasHostDefault = $ownSection -match '(?m)^- id:\s*agent-default-model\s*$'
+  if (-not $ownHasHostDefault) {
+    $hostDefaultBlock = Find-RowBlock $dstLines 'agent-default-model'
+    if ($null -ne $hostDefaultBlock) {
+      $srcLines = Replace-RowBlock $srcLines 'agent-default-model' $hostDefaultBlock
+      $patchMode = '源全量（保留目标宿主默认模型）+ 自有覆盖段'
+    }
+  }
+  if (-not $patchMode) { $patchMode = '源全量 + 自有覆盖段' }
+  $newPatch = (@($srcLines) -join "`n").TrimEnd() + "`n`n" + $ownSection + "`n"
 } elseif (-not $dstPatchExists) {
   $newPatch = $srcPatch.TrimEnd() + "`n"
   $patchMode = '目标不存在，直接采用源 patch'

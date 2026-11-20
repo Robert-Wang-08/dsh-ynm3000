@@ -84,7 +84,7 @@ web profile 基线 `C:\Users\wang\.dsh\profiles\web` 被复制的文件：`packa
     stateDir: 'C:\Users\wang\.dsh\state\superagent'
 ```
 
-理由：端口与 web（3080）分开；`stateDir` 是插件必填项；web 的 patch 层另有 MCP / pwsh-sandbox / llm-deepseek / agent-default-model（ais-2dsglm / deepseek-flash）等本机值，必须一并继承。
+理由：端口与 web（3080）分开；`stateDir` 是插件必填项；web 的 patch 层另有 MCP / pwsh-sandbox / llm-deepseek 等本机值，必须一并继承。唯一的例外是 `agent-default-model`：superagent 用 `opencode-go` / `deepseek-v4.1-flash`，与 web 的 `ais-2dsglm` / `deepseek-flash` 不同，由同步脚本按行保留（见 §9）。
 
 ### 4.1 装包与登记
 
@@ -186,6 +186,7 @@ pwsh -File dsh-sync.ps1 -SkipPackUpdate  # link 开发态：只做 superagent �
 - `dependencies` = web 全部依赖 + superagent 独有依赖（不写死插件名，当前是 `dsh-superagent`、`dsh-plugin-eye-care-bg` 等），spec 原样继承。
 - `dsh.profile.bundles` = web 顺序 + superagent 独有 bundle，`dsh-config-pack` 移到最后；`dsh.profile` 的其它键（`patchReload` 等）保留。
 - `cordis.patch.yml` = web 全量 + 标记行之后的自有覆盖段。支持的标记：`# ── dsh-superagent 本机配置`、`# ===== dsh-superagent 本 profile 自有覆盖`、`# ===== superagent 自有覆盖`。找不到标记且内容与 web 不同时默认失败，不会静默丢掉本机覆盖；确要保留目标 patch 用 `-KeepTargetPatch`。
+- `cordis.patch.yml` 里目标 profile 的 `agent-default-model`（DSH 宿主默认模型）整块保留，不被 web 的同名行覆盖。superagent 按人的要求用 `opencode-go` / `deepseek-v4.1-flash`（`reasoningEffort: high`），web 仍是 `ais-2dsglm` / `deepseek-flash`；这一行落在镜像区，所以由脚本做行级替换。若该行已经放进自有覆盖段，脚本不再插手。
 - 复制 `vendor/`、`patches/`、`compatibility.json`、`pnpm-lock.yaml`，并给 `pnpm-workspace.yaml` 补齐 `blockExoticSubdeps: false`。
 - 写前备份到 `%USERPROFILE%\.dsh\backups\superagent-profile-sync-<UTC>`（含 `MANIFEST.json`）；配置或依赖有变化才 `pnpm install`；最后跑 `dsh --profile superagent --dump-config` 组合校验。
 - 目标宿主正在运行时默认拒绝写入（退出码 3）：先 `pwsh -File dsh-superagent-service.ps1 stop`，同步后再 `start`。`-SkipHostGuard` 只用于明确接受热改的场景。
