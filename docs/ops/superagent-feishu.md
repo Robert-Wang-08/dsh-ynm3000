@@ -13,7 +13,7 @@
 | 服务 | `dsh-superagent-service.ps1`，profile `superagent`，端口 3082 |
 | Source 状态 | `feishu: ready` / `history: ready` / `github: off` |
 | 仓库（deployment 检查硬要求） | `Robert-Wang-08/dsh-ynm3000`，`gh` CLI `C:/Program Files/GitHub CLI/gh.exe` |
-| 默认模型 | `ais-2dsglm / deepseek-flash`（`agent-default-model`）；eval/executor 均为 `null` 继承它 |
+| 默认模型 | `opencode-go / deepseek-v4.1-flash`（`agent-default-model`，`reasoningEffort: high`）；eval/executor 均显式钉同一路由 |
 
 ## 2. 打通过程中修掉的四个真实缺陷（都由本机实测确认，不是推测）
 

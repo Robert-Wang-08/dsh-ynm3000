@@ -96,7 +96,7 @@ pwsh -File dsh-sync.ps1 -Profiles web      # 单 profile 设备
 pwsh -File dsh-sync.ps1 -SkipPackUpdate    # link 开发态：只做 superagent 镜像
 ```
 
-`dsh-sync.ps1` 做：解析 web 的 `dsh-config-pack` 来源 → 发布版走 `update.ps1` 全流程（远端最新 tag、pnpm 前置、bundle 登记、偏差验收），`link:` 开发态跳过发布版更新（先 `git pull` 对应仓库）→ 把 web 的依赖、bundle 顺序与 `cordis.patch.yml` 镜像到 `superagent`（保留 superagent 独有依赖/插件，以及该 profile 自己的 patch 覆盖段，`dsh-config-pack` 始终排最后）→ 两个 profile 各跑一次 `dsh --profile <p> --dump-config` 组合校验。写入前默认拒绝宿主正在运行的 profile；确认要热改时加 `-SkipHostGuard`。镜像前置备份写在 `%USERPROFILE%\.dsh\backups\superagent-profile-sync-<UTC>`。
+`dsh-sync.ps1` 做：解析 web 的 `dsh-config-pack` 来源 → 发布版走 `update.ps1` 全流程（远端最新 tag、pnpm 前置、bundle 登记、偏差验收），`link:` 开发态跳过发布版更新（先 `git pull` 对应仓库）→ 把 web 的依赖、bundle 顺序与 `cordis.patch.yml` 镜像到 `superagent`（保留 superagent 独有依赖/插件、该 profile 自己的 patch 覆盖段，以及该 profile 的 `agent-default-model`：superagent 用 `opencode-go` / `deepseek-v4.1-flash`，web 仍用 `ais-2dsglm`；`dsh-config-pack` 始终排最后）→ 两个 profile 各跑一次 `dsh --profile <p> --dump-config` 组合校验。写入前默认拒绝宿主正在运行的 profile；确认要热改时加 `-SkipHostGuard`。镜像前置备份写在 `%USERPROFILE%\.dsh\backups\superagent-profile-sync-<UTC>`。
 
 低层单 profile 入口仍是 `dsh-config-pack\scripts\update.ps1`：
 

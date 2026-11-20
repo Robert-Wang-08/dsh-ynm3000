@@ -50,11 +50,18 @@ $saOwn = @'
     stateDir: 'C:/state/superagent'
 '@
 
-function New-Fixture([string]$Name, [switch]$WebLinkPack, [switch]$DivergentNoMarker, [switch]$LocalFork) {
+function New-Fixture([string]$Name, [switch]$WebLinkPack, [switch]$DivergentNoMarker, [switch]$LocalFork, [switch]$OwnHostModel) {
   $fx = Join-Path $WorkRoot $Name
   $web = Join-Path $fx 'profiles/web'
   $sa = Join-Path $fx 'profiles/superagent'
   $packSpec = if ($WebLinkPack) { 'link:C:/nonexistent/dsh-config-pack' } else { 'github:Robert-Wang-08/dsh-config-pack#v0.11.7' }
+  # 目标 profile 的宿主默认模型可以是 superagent 自己的值（镜像区，不在自有覆盖段里），
+  # 用来验证同步后不会被 web 的 ais-2dsglm 覆盖。
+  $targetWeb = $webPatch
+  if ($OwnHostModel) {
+    $targetWeb = $webPatch -replace '(?m)^- id: agent-default-model\r?\n  config:\r?\n    model: deepseek-flash$', "- id: agent-default-model`n  config:`n    provider: opencode-go`n    model: deepseek-v4.1-flash`n    reasoningEffort: high"
+    if ($targetWeb -eq $webPatch) { throw 'fixture: failed to set the target host default model' }
+  }
 
   $webPkg = [ordered]@{
     name = 'dsh-profile-web'; private = $true
@@ -88,7 +95,7 @@ function New-Fixture([string]$Name, [switch]$WebLinkPack, [switch]$DivergentNoMa
   if ($DivergentNoMarker) {
     Put $sa 'cordis.patch.yml' ($webPatch.TrimEnd() + "`n- id: own-line`n  config:`n    port: 3082`n")
   } else {
-    Put $sa 'cordis.patch.yml' ($webPatch.TrimEnd() + "`n`n" + $saOwn)
+    Put $sa 'cordis.patch.yml' ($targetWeb.TrimEnd() + "`n`n" + $saOwn)
   }
   Put $sa 'pnpm-workspace.yaml' "nodeLinker: hoisted`n"
   Put $sa 'compatibility.json' '{}'
@@ -165,6 +172,19 @@ try {
   $r = Invoke-Sync $fx
   Check ($r.code -ne 0 -and $r.out -match 'dsh-superagent-local') 'guard: 拒绝 dsh-superagent-local'
 
+  # ---- E2. 宿主默认模型：保留目标 profile 的 agent-default-model ------------
+  $fx = New-Fixture 'hostdefault' -OwnHostModel
+  $r = Invoke-Sync $fx
+  Check ($r.code -eq 0) 'hostdefault: exit 0'
+  $patchPath = Join-Path $fx 'profiles/superagent/cordis.patch.yml'
+  $patch = Get-Content $patchPath -Raw
+  Check (([regex]::Matches($patch, '(?m)^- id:\s*agent-default-model\s*$')).Count -eq 1) 'hostdefault: agent-default-model 行不重复'
+  Check ($patch -match 'provider: opencode-go' -and $patch -match 'model: deepseek-v4.1-flash') 'hostdefault: 保留 superagent 的 opencode-go 默认模型'
+  Check ($patch -notmatch 'model: deepseek-flash') 'hostdefault: web 的 ais-2dsglm 默认值未覆盖目标'
+  $h1 = Hash-Of $patchPath
+  $r = Invoke-Sync $fx
+  Check ($r.code -eq 0 -and (Hash-Of $patchPath) -eq $h1) 'hostdefault: 第二次同步幂等'
+
   # ---- F. 一键入口：顺序、失败中断、link 开发态、DryRun、缺 profile ---------
   $stubDir = Join-Path $WorkRoot 'stubs'
   New-Item -ItemType Directory -Force $stubDir | Out-Null
@@ -219,7 +239,7 @@ exit ([int]$env:STUB_SYNC_EXIT)
     $env:STUB_CALLS = $oldCalls; $env:STUB_UPDATE_EXIT = $oldUe; $env:STUB_SYNC_EXIT = $oldSe
   }
 
-  Write-Host ('PASS: ' + $script:passed + ' checks（镜像语义/保留/幂等/DryRun/标记保护/防呆/一键入口）')
+  Write-Host ('PASS: ' + $script:passed + ' checks（镜像语义/保留/宿主默认模型/幂等/DryRun/标记保护/防呆/一键入口）')
 } finally {
   if (Test-Path $WorkRoot) { Remove-Item $WorkRoot -Recurse -Force -ErrorAction SilentlyContinue }
 }
