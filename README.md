@@ -53,6 +53,12 @@ git clone --recurse-submodules https://github.com/Robert-Wang-08/dsh-ynm3000.git
 
 换另一台设备从零部署这套机制（依赖、设备配置、投递绑定、计划任务与验收清单）见 [跨设备部署说明](docs/ops/superagent-health-cross-device.md)。
 
+## Superagent 默认模型切换
+
+一条命令（或飞书里一句话）把 superagent **新建会话**默认使用的 provider / 模型切过去：`scripts/dsh-superagent-model.ps1` 提供 `show` / `list` / `set -Role both|eval|executor -Provider … -Model … [-ReasoningEffort …] [-DryRun]`，背后是运行中管理接口的 `eval` / `executor` 设置块，保存即生效、不需要重启。
+
+飞书里直接说「把 superagent 默认模型改成 X」走同一条路：技能 `superagent-model-switch`（本体在 `.agents/skills/`，机器侧部署到 `%USERPROFILE%\.dsh\skills\`）。三层“默认”的区别、生效范围、验收记录与回退见 [操作说明](docs/ops/superagent-model-switch.md)。
+
 ## 新设备安装
 
 在 `dsh-config-pack` 里一条命令。有共享盘就读已经填好的答案；没有就用包内模板，或把说明交给 AI。然后装包、写路由、设置用户环境变量。密钥不进答案文件。
