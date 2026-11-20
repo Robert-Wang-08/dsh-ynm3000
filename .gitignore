@@ -36,6 +36,9 @@ __pycache__/
 .tmp-*
 downloads/
 AGENTS.md.bak-*
+# 周报一次性 AI 产物（2026-11-19 生成的 html/json/md 工件），属本机临时产物，不入库
+_work/weekly-ai-artifacts-20261119/
+
 # 手工 scratch 与二进制工件（2026-11-14 收口评审 F5：显式排除，别指望 -IncludeUntracked 不扫）
 a-prime-demo.txt
 *.tgz
